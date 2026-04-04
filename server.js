@@ -196,7 +196,7 @@ app.post("/api/generate-card", async (req, res) => {
           id_weight: 1.0,
           true_cfg: 1,
           max_sequence_length: 128,
-          output_format: "jpg",
+          output_format: "jpeg",
           output_quality: 95,
           num_outputs: 1,
         },
@@ -274,7 +274,11 @@ app.post("/api/generate-card", async (req, res) => {
     return res.json({ imageUrl: "/outputs/" + outputName, model: "flux+faceswap", quality: "cinematic-swap" });
 
   } catch (err) {
-    console.log("  TIER 2 FAILED: " + err.message);
+    const message = err.message || "Unknown error";
+    console.log("  TIER 2 FAILED: " + message);
+    if (message.includes("404")) {
+      console.log("    Face-swap endpoint may be unavailable or the model path is invalid.");
+    }
   }
 
   // =========================================
