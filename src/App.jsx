@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 
-const API_URL = "";
+const API_URL = "https://facedrop-production.up.railway.app";
 
 const ALL_THEMES = [
   { id: "cyberpunk", name: "Cyberpunk Warrior", emoji: "\u26A1", accent: "#00f0ff", glow: "rgba(0,240,255,0.5)", bg: "linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)", style: "Video game", prompt: "cyberpunk warrior, neon city, glowing lights, chrome armor, futuristic, cinematic", tagline: "NEON STREETS. CHROME SKIN." },
