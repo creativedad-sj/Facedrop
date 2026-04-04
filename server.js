@@ -18,45 +18,45 @@ const REPLICATE_API_TOKEN = process.env.REPLICATE_API_TOKEN || "YOUR_TOKEN_HERE"
 const PORT = process.env.PORT || 3001;
 
 // ============================================
-// THEME DEFINITIONS
-// scene_prompt: Used by Flux to generate the cinematic scene
-// avatar_prompt: Used by Easel AI Avatars as single-step alternative
+// PROMPTS — Key insight: tell Flux to KEEP the face
+// "Keep this person's exact face, skin tone, facial hair,
+//  and features unchanged" is the critical instruction
 // ============================================
 const THEMES = {
   cyberpunk: {
-    scene_prompt: "A cinematic portrait of a lone cyberpunk warrior standing in a rain-soaked neon-lit Tokyo alley at night. They wear futuristic chrome and black tactical armor with glowing cyan LED accents. Massive holographic advertisements glow in pink and blue behind them. Rain reflects neon on the wet street. Blade runner aesthetic, dramatic volumetric lighting, ultra detailed cinematic photograph, 8k, portrait aspect ratio 3:4, face clearly visible looking at camera",
-    avatar_prompt: "a cyberpunk warrior standing in neon rain-soaked Tokyo alley, chrome tactical armor with glowing cyan LEDs, holographic ads in background, blade runner cinematic lighting",
-    gender: "male",
+    prompt: "Keep this exact person's face, skin tone, facial structure, and facial hair completely unchanged. Only change their outfit and background. Dress them in futuristic chrome and black tactical cyberpunk armor with glowing cyan LED strips on the chest and shoulders. Place them standing in a rain-soaked neon-lit Tokyo alley at night with massive holographic pink and blue advertisements glowing behind them. Rain reflects neon on wet street. Blade runner cinematic lighting, dramatic, hyper detailed 8k photograph",
+    fallback_style: "Video game",
+    fallback_prompt: "cyberpunk warrior, neon rain city, chrome tactical armor with cyan LEDs, holographic billboards, blade runner, cinematic",
   },
   mughal: {
-    scene_prompt: "A cinematic portrait of a powerful Mughal emperor seated on an ornate golden throne inside the Diwan-i-Khas palace. He wears a magnificent brocade silk sherwani with gold embroidery, a jeweled turban with peacock feather and diamond ornament, heavy gold necklaces with rubies and emeralds. Intricate marble inlay, arched doorways with floral motifs, warm candlelight casting golden shadows. Oil painting masterpiece, Rembrandt lighting, ultra detailed 8k, portrait aspect ratio 3:4, face clearly visible looking at camera",
-    avatar_prompt: "a mughal emperor on golden throne, jeweled turban with peacock feather, brocade silk sherwani, marble palace with candlelight, regal oil painting style",
-    gender: "male",
+    prompt: "Keep this exact person's face, skin tone, facial structure, and facial hair completely unchanged. Only change their outfit and background. Dress them in a magnificent royal Mughal brocade silk sherwani with heavy gold embroidery, a jeweled turban with peacock feather and diamond ornament, and heavy gold necklaces with rubies and emeralds. Seat them on an ornate golden throne in a palace with intricate marble inlay walls, arched doorways with floral motifs, and warm golden candlelight. Oil painting masterpiece lighting, ultra detailed 8k",
+    fallback_style: "3D",
+    fallback_prompt: "mughal emperor, golden throne, jeweled turban, brocade silk sherwani, marble palace, candlelight, regal oil painting",
   },
   anime: {
-    scene_prompt: "A cinematic portrait of an anime hero standing dramatically on a Tokyo skyscraper rooftop at sunset. They wear a flowing black coat with red lining billowing in the wind. Cherry blossom petals swirl around them. The city stretches below with dramatic orange and purple sky. Vibrant saturated colors, detailed anime-inspired illustration style, dramatic composition, 8k quality, portrait aspect ratio 3:4, face clearly visible looking at camera",
-    avatar_prompt: "an anime hero on tokyo skyscraper rooftop at sunset, flowing black coat with red lining, cherry blossom petals, dramatic wind, vibrant anime style",
-    gender: "male",
+    prompt: "Keep this exact person's face, skin tone, facial structure, and facial hair completely unchanged. Only change their outfit and background. Dress them in a dramatic flowing black leather coat with red lining that billows in wind. Place them standing on a Tokyo skyscraper rooftop at sunset with cherry blossom petals swirling around them. The city stretches below with dramatic orange and purple sky. Vibrant saturated colors, cinematic anime-inspired composition, dramatic backlit, hyper detailed 8k photograph",
+    fallback_style: "Emoji",
+    fallback_prompt: "anime hero, skyscraper rooftop, flowing black coat red lining, cherry blossoms, sunset tokyo, dramatic",
   },
   viking: {
-    scene_prompt: "A cinematic portrait of a fearsome Viking warrior chieftain standing on a snowy cliff overlooking a fjord. He wears a heavy bear fur cloak over chainmail armor with a horned iron helmet. Blue war paint in Norse patterns on his face. He holds a massive battle axe. A dragon-headed longship sits in icy waters below. Dramatic overcast sky with rays of light breaking through clouds. Epic Lord of the Rings aesthetic, hyper detailed 8k photograph, portrait aspect ratio 3:4, face clearly visible looking at camera",
-    avatar_prompt: "a viking warrior chieftain on snowy cliff over fjord, bear fur cloak, chainmail armor, horned helmet, blue war paint, battle axe, longship below, epic cinematic",
-    gender: "male",
+    prompt: "Keep this exact person's face, skin tone, facial structure, and facial hair completely unchanged. Only change their outfit and background. Dress them in a heavy bear fur cloak over chainmail armor. Add subtle blue war paint in Norse patterns on their cheekbones. Place them standing on a snowy cliff overlooking a dramatic fjord with a dragon-headed Viking longship in the icy water below. Overcast sky with dramatic golden rays breaking through clouds. Epic cinematic Lord of the Rings aesthetic, hyper detailed 8k photograph",
+    fallback_style: "Video game",
+    fallback_prompt: "viking warrior, bear fur cloak, chainmail, blue war paint, snowy cliff, fjord, longship, epic cinematic",
   },
   bollywood: {
-    scene_prompt: "A cinematic portrait of a powerful Bollywood villain making a dramatic entrance at a grand palace party. He wears a perfectly tailored midnight black bandhgala suit with gold buttons, gold pocket square, and heavy gold chain. Confident menacing expression. Background shows lavish party with crystal chandeliers, red velvet curtains, warm dramatic rim lighting. Sanjay Leela Bhansali cinematography, slow motion movie poster aesthetic, 8k cinematic photograph, portrait aspect ratio 3:4, face clearly visible looking at camera",
-    avatar_prompt: "a bollywood villain at grand palace party, black bandhgala suit with gold accents, crystal chandeliers, red velvet, dramatic cinematic rim lighting, movie poster style",
-    gender: "male",
+    prompt: "Keep this exact person's face, skin tone, facial structure, and facial hair completely unchanged. Only change their outfit and background. Dress them in a perfectly tailored midnight black bandhgala suit with gold buttons, a gold pocket square, and a heavy gold chain around the neck. Give them a confident powerful expression. Place them at a grand palace party with crystal chandeliers, red velvet curtains, and dramatic warm rim lighting from behind. Bollywood movie poster cinematic style, Sanjay Leela Bhansali aesthetic, hyper detailed 8k photograph",
+    fallback_style: "3D",
+    fallback_prompt: "bollywood villain, black bandhgala suit gold accents, gold chain, palace party, chandeliers, cinematic rim lighting",
   },
   samurai: {
-    scene_prompt: "A cinematic portrait of a legendary samurai master standing in a serene Japanese temple garden during golden hour. He wears full traditional yoroi armor in black and gold with red silk cord binding. A katana sheathed at his side. Behind him a traditional wooden temple with curved roofs, koi pond with stone bridge, perfectly trimmed bonsai. Cherry blossom petals drift through warm golden light. Akira Kurosawa cinematography, painterly quality, hyper detailed 8k, portrait aspect ratio 3:4, face clearly visible looking at camera",
-    avatar_prompt: "a samurai master in japanese temple garden, full yoroi armor black and gold, katana at side, cherry blossoms, golden hour, kurosawa cinematography, painterly epic",
-    gender: "male",
+    prompt: "Keep this exact person's face, skin tone, facial structure, and facial hair completely unchanged. Only change their outfit and background. Dress them in full traditional samurai yoroi armor in black lacquer and gold with red silk cord binding. Place a katana sheathed at their side. Set them in a serene Japanese temple garden during golden hour with a traditional wooden temple behind them, a koi pond with stone bridge, and cherry blossom petals drifting through warm golden light. Akira Kurosawa cinematic style, painterly, hyper detailed 8k photograph",
+    fallback_style: "3D",
+    fallback_prompt: "samurai master, yoroi armor black gold, katana, japanese temple garden, cherry blossoms, golden hour, kurosawa",
   },
   astronaut: {
-    scene_prompt: "A cinematic portrait of an astronaut floating in space with Earth visible in the background. They wear a detailed white NASA-style spacesuit with mission patches. The visor reflects the blue marble of Earth and distant stars. The International Space Station partially visible behind them. Harsh sunlight creating dramatic contrast against the void of space. Gravity movie aesthetic, photorealistic IMAX quality, hyper detailed 8k, portrait aspect ratio 3:4, face visible through clear visor looking at camera",
-    avatar_prompt: "an astronaut floating in space, white NASA spacesuit, earth reflection in visor, ISS in background, dramatic sun contrast, gravity movie aesthetic, photorealistic",
-    gender: "male",
+    prompt: "Keep this exact person's face, skin tone, facial structure, and facial hair completely unchanged and clearly visible through a transparent helmet visor. Dress them in a detailed white NASA-style spacesuit with mission patches and an American flag. Place them floating in space with the blue marble of Earth visible behind them and the International Space Station in the background. Harsh sunlight from the right creating dramatic contrast. Gravity movie IMAX aesthetic, photorealistic, hyper detailed 8k photograph",
+    fallback_style: "3D",
+    fallback_prompt: "astronaut in space, white NASA spacesuit, earth behind, ISS background, dramatic sun, gravity movie, photorealistic",
   },
 };
 
@@ -85,19 +85,15 @@ function fileToDataUri(filePath) {
 
 async function pollPrediction(predictionId) {
   const url = "https://api.replicate.com/v1/predictions/" + predictionId;
-  for (let i = 0; i < 120; i++) {
+  for (let i = 0; i < 60; i++) {
     await new Promise((r) => setTimeout(r, 2000));
-    const response = await fetch(url, {
-      headers: { Authorization: "Bearer " + REPLICATE_API_TOKEN },
-    });
+    const response = await fetch(url, { headers: { Authorization: "Bearer " + REPLICATE_API_TOKEN } });
     const result = await response.json();
     console.log("    Poll #" + (i + 1) + ": " + result.status);
     if (result.status === "succeeded") return result;
-    if (result.status === "failed" || result.status === "canceled") {
-      throw new Error(result.status + ": " + (result.error || "unknown"));
-    }
+    if (result.status === "failed" || result.status === "canceled") throw new Error(result.status + ": " + (result.error || "unknown"));
   }
-  throw new Error("Timed out after 4 min");
+  throw new Error("Timed out");
 }
 
 async function downloadImage(imageUrl) {
@@ -115,13 +111,10 @@ function getImageUrl(result) {
   return null;
 }
 
-async function callReplicateModel(url, body) {
+async function callModel(url, body) {
   const response = await fetch(url, {
     method: "POST",
-    headers: {
-      Authorization: "Bearer " + REPLICATE_API_TOKEN,
-      "Content-Type": "application/json",
-    },
+    headers: { Authorization: "Bearer " + REPLICATE_API_TOKEN, "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
   const text = await response.text();
@@ -130,27 +123,22 @@ async function callReplicateModel(url, body) {
     await new Promise((r) => setTimeout(r, 15000));
     const retry = await fetch(url, { method: "POST", headers: { Authorization: "Bearer " + REPLICATE_API_TOKEN, "Content-Type": "application/json" }, body: JSON.stringify(body) });
     const rt = await retry.text();
-    if (!retry.ok) throw new Error("Retry " + retry.status + ": " + rt.substring(0, 200));
+    if (!retry.ok) throw new Error("Retry " + retry.status);
     return JSON.parse(rt);
   }
-  if (!response.ok) throw new Error("HTTP " + response.status + ": " + text.substring(0, 300));
+  if (!response.ok) throw new Error("HTTP " + response.status + ": " + text.substring(0, 200));
   return JSON.parse(text);
 }
 
 // ============================================
-// GENERATE CARD — Three approaches in priority order
-//
-// 1. TWO-STEP: Flux scene + Easel face-swap (best quality)
-// 2. SINGLE-STEP: Easel AI Avatars (good quality, faster)
-// 3. FALLBACK: face-to-many (stylized)
+// GENERATE CARD
 // ============================================
 app.post("/api/generate-card", async (req, res) => {
   const { faceId, themeId } = req.body;
-
   if (!faceId || !themeId) return res.status(400).json({ error: "faceId and themeId required" });
 
   const theme = THEMES[themeId];
-  if (!theme) return res.status(400).json({ error: "Unknown theme: " + themeId });
+  if (!theme) return res.status(400).json({ error: "Unknown theme" });
 
   const facePath = path.join("uploads", faceId);
   if (!fs.existsSync(facePath)) return res.status(404).json({ error: "Face not found" });
@@ -161,17 +149,16 @@ app.post("/api/generate-card", async (req, res) => {
   console.log("  GENERATING: " + themeId.toUpperCase());
   console.log("========================================");
 
-  // ---- APPROACH 1: Two-step (Flux scene + face swap) ----
+  // ---- PRIMARY: Flux Kontext Pro with face image ----
   try {
-    console.log("  [APPROACH 1] Two-step pipeline");
+    console.log("  Flux Kontext Pro (face-preserving prompt)...");
 
-    // Step 1: Generate cinematic scene with Flux
-    console.log("  Step 1: Flux Kontext Pro — generating scene...");
-    const sceneResult = await callReplicateModel(
+    const prediction = await callModel(
       "https://api.replicate.com/v1/models/black-forest-labs/flux-kontext-pro/predictions",
       {
         input: {
-          prompt: theme.scene_prompt,
+          image: faceDataUri,
+          prompt: theme.prompt,
           aspect_ratio: "3:4",
           safety_tolerance: 5,
           output_quality: 95,
@@ -179,83 +166,35 @@ app.post("/api/generate-card", async (req, res) => {
       }
     );
 
-    if (sceneResult.error) throw new Error("Flux error: " + sceneResult.error);
-    let scene = sceneResult;
-    if (scene.status !== "succeeded") scene = await pollPrediction(scene.id);
+    if (prediction.error) throw new Error(prediction.error);
+    console.log("    Prediction: " + prediction.id);
 
-    const sceneUrl = getImageUrl(scene);
-    if (!sceneUrl) throw new Error("No scene image");
-    console.log("  Step 1 DONE - scene generated");
+    let result = prediction;
+    if (result.status !== "succeeded") result = await pollPrediction(result.id);
 
-    // Step 2: Swap user's face onto the scene
-    console.log("  Step 2: Easel face-swap — adding your face...");
-    const swapResult = await callReplicateModel(
-      "https://api.replicate.com/v1/models/easel/advanced-face-swap/predictions",
-      {
-        input: {
-          target_image: sceneUrl,
-          swap_image: faceDataUri,
-          user_gender: theme.gender,
-          hair_source: "target",
-        },
-      }
-    );
+    const imageUrl = getImageUrl(result);
+    if (!imageUrl) throw new Error("No output image");
 
-    if (swapResult.error) throw new Error("Swap error: " + swapResult.error);
-    let swap = swapResult;
-    if (swap.status !== "succeeded") swap = await pollPrediction(swap.id);
-
-    const swapUrl = getImageUrl(swap);
-    if (!swapUrl) throw new Error("No swap output");
-
-    const outputName = await downloadImage(swapUrl);
-    console.log("  TWO-STEP SUCCESS! " + outputName);
-    return res.json({ imageUrl: "/outputs/" + outputName, model: "flux+faceswap", quality: "cinematic" });
+    const outputName = await downloadImage(imageUrl);
+    console.log("  SUCCESS! " + outputName);
+    return res.json({ imageUrl: "/outputs/" + outputName, model: "flux-kontext-pro", quality: "cinematic" });
 
   } catch (err) {
-    console.log("  Two-step FAILED: " + err.message);
+    console.log("  Flux FAILED: " + err.message);
   }
 
-  // ---- APPROACH 2: Easel AI Avatars (single-step) ----
+  // ---- FALLBACK: face-to-many ----
   try {
-    console.log("  [APPROACH 2] Easel AI Avatars");
-    const avatarResult = await callReplicateModel(
-      "https://api.replicate.com/v1/models/easel/ai-avatars/predictions",
-      {
-        input: {
-          prompt: theme.avatar_prompt,
-          face_image: faceDataUri,
-          user_gender: theme.gender,
-        },
-      }
-    );
+    console.log("  Fallback: face-to-many...");
 
-    if (avatarResult.error) throw new Error(avatarResult.error);
-    let avatar = avatarResult;
-    if (avatar.status !== "succeeded") avatar = await pollPrediction(avatar.id);
-
-    const avatarUrl = getImageUrl(avatar);
-    if (!avatarUrl) throw new Error("No avatar output");
-
-    const outputName = await downloadImage(avatarUrl);
-    console.log("  AVATAR SUCCESS! " + outputName);
-    return res.json({ imageUrl: "/outputs/" + outputName, model: "easel-avatars", quality: "avatar" });
-
-  } catch (err) {
-    console.log("  Avatars FAILED: " + err.message);
-  }
-
-  // ---- APPROACH 3: face-to-many (stylized fallback) ----
-  try {
-    console.log("  [APPROACH 3] face-to-many (fallback)");
-    const prediction = await callReplicateModel(
+    const prediction = await callModel(
       "https://api.replicate.com/v1/predictions",
       {
         version: "35cea9c3164d9fb7fbd48b51503eabdb39c9d04fdaef9a68f368bed8087ec5f9",
         input: {
           image: faceDataUri,
-          style: "3D",
-          prompt: theme.avatar_prompt,
+          style: theme.fallback_style,
+          prompt: theme.fallback_prompt,
           negative_prompt: "nsfw, nude, blurry, low quality, deformed, ugly",
           instant_id_strength: 0.8,
         },
@@ -277,29 +216,22 @@ app.post("/api/generate-card", async (req, res) => {
     console.log("  Fallback FAILED: " + err.message);
   }
 
-  console.log("  ALL APPROACHES FAILED");
-  res.status(500).json({ error: "All generation methods failed" });
+  res.status(500).json({ error: "All generation failed" });
 });
 
 // Debug
 app.get("/api/debug/test-token", async (req, res) => {
-  try {
-    const r = await fetch("https://api.replicate.com/v1/account", { headers: { Authorization: "Bearer " + REPLICATE_API_TOKEN } });
-    res.json(await r.json());
-  } catch (err) { res.json({ error: err.message }); }
+  try { const r = await fetch("https://api.replicate.com/v1/account", { headers: { Authorization: "Bearer " + REPLICATE_API_TOKEN } }); res.json(await r.json()); }
+  catch (err) { res.json({ error: err.message }); }
 });
 
-// Start
 app.listen(PORT, () => {
   console.log("");
   console.log("============================================");
-  console.log("  FACEDROP Premium Pipeline v3.0");
+  console.log("  FACEDROP v4.0 — Face-Preserving Pipeline");
   console.log("  Port: " + PORT);
   console.log("  Token: " + (REPLICATE_API_TOKEN !== "YOUR_TOKEN_HERE" ? "YES" : "MISSING"));
-  console.log("");
-  console.log("  Pipeline (in priority order):");
-  console.log("    1. Flux scene + Easel face-swap (cinematic)");
-  console.log("    2. Easel AI Avatars (single-step)");
-  console.log("    3. face-to-many (stylized fallback)");
+  console.log("  Primary: Flux Kontext Pro (face-preserving)");
+  console.log("  Fallback: face-to-many (stylized)");
   console.log("============================================");
 });
