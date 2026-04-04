@@ -196,7 +196,7 @@ app.post("/api/generate-card", async (req, res) => {
           id_weight: 1.0,
           true_cfg: 1,
           max_sequence_length: 128,
-          output_format: "jpeg",
+          output_format: "jpg",
           output_quality: 95,
           num_outputs: 1,
         },
