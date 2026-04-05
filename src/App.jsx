@@ -1,9 +1,12 @@
-import { useState, useRef, useCallback, useEffect, useMemo } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo, lazy, Suspense } from "react";
 
 const API_URL = "https://facedrop-production.up.railway.app";
 
 // Check if test mode via URL param
 const isTestMode = typeof window !== "undefined" && window.location.search.includes("test");
+
+// Lazy load TestPage component
+const TestPage = lazy(() => import("./Testpage.jsx"));
 
 const ALL_THEMES = [
   { id: "cyberpunk", name: "Cyberpunk Warrior", emoji: "\u26A1", accent: "#00f0ff", glow: "rgba(0,240,255,0.5)", bg: "linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)", tagline: "NEON STREETS. CHROME SKIN." },
@@ -78,14 +81,13 @@ function Streak({ n }) {
 }
 
 export default function App() {
-  // State for dynamically loaded TestPage
-  const [TestPageModule, setTestPageModule] = useState(null);
-  const [showTestPage, setShowTestPage] = useState(false);
-
-  // If ?test in URL, show test page
-  if (showTestPage && TestPageModule) {
-    const TestPageComponent = TestPageModule.default;
-    return <TestPageComponent />;
+  // If ?test in URL, show test page (with Suspense fallback)
+  if (isTestMode) {
+    return (
+      <Suspense fallback={<div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", fontSize: 18, color: "#888" }}>Loading test page...</div>}>
+        <TestPage />
+      </Suspense>
+    );
   }
 
   const [screen, setScreen] = useState("home");
@@ -106,21 +108,6 @@ export default function App() {
   const fileRef = useRef(null);
 
   useEffect(() => { fetch(API_URL+"/api/health").then(r=>r.json()).then(d=>setBackend(d.hasToken?"ai":"mock")).catch(()=>setBackend("off")); }, []);
-
-  // Dynamically load TestPage if in test mode
-  useEffect(() => {
-    if (isTestMode) {
-      import("./Testpage.jsx")
-        .then(m => {
-          setTestPageModule(m);
-          setShowTestPage(true);
-        })
-        .catch(err => {
-          console.error("Failed to load TestPage:", err);
-          setShowTestPage(false);
-        });
-    }
-  }, []);
 
   const MSGS = ["Scanning your face...","Entering the multiverse...","Painting your alter ego...","Rolling for rarity...","Adding dramatic flair...","Almost ready..."];
   useEffect(() => { if(!gen) return; let i=0; setMsg(MSGS[0]); const t=setInterval(()=>{i=(i+1)%MSGS.length;setMsg(MSGS[i]);},2500); return()=>clearInterval(t); }, [gen]);
