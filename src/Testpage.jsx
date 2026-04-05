@@ -1,6 +1,9 @@
 import { useState, useRef, useCallback } from "react";
 
-const API_URL = "";
+// Use relative URLs for API (works with Vite proxy in dev and absolute paths in prod)
+const API_URL = typeof window !== "undefined" && window.location.hostname === "localhost" 
+  ? "" 
+  : "https://facedrop-production.up.railway.app";
 
 const THEMES = [
   { id: "cyberpunk", name: "Cyberpunk Warrior", emoji: "\u26A1" },
@@ -31,6 +34,7 @@ export default function TestPage() {
       const fd = new FormData();
       fd.append("face", f);
       const r = await fetch(API_URL + "/api/upload-face", { method: "POST", body: fd });
+      if (!r.ok) throw new Error(`HTTP ${r.status}: ${r.statusText}`);
       const d = await r.json();
       setFaceId(d.faceId);
     } catch (err) {
@@ -48,6 +52,7 @@ export default function TestPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ faceId, themeId, gender }),
       });
+      if (!r.ok) throw new Error(`HTTP ${r.status}: ${r.statusText}`);
       const d = await r.json();
       setResults(prev => ({ ...prev, [themeId]: d }));
     } catch (err) {
@@ -73,6 +78,7 @@ export default function TestPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ faceId, gender }),
       });
+      if (!r.ok) throw new Error(`HTTP ${r.status}: ${r.statusText}`);
       const d = await r.json();
       setResults(d.results || {});
       setAllDone(true);
