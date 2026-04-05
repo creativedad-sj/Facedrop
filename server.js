@@ -356,7 +356,13 @@ app.get("/api/debug/test-pulid", async (req, res) => {
   } catch (err) { res.json({ error: err.message }); }
 });
 
+app.use(express.static("dist"));
+
 // Start
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "dist", "index.html"));
+});
+
 app.listen(PORT, () => {
   console.log("");
   console.log("============================================");
