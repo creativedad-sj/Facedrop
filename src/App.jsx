@@ -5,9 +5,6 @@ const API_URL = "https://facedrop-production.up.railway.app";
 // Check if test mode via URL param
 const isTestMode = typeof window !== "undefined" && window.location.search.includes("test");
 
-// Lazy load test page
-const TestPage = isTestMode ? (await import("./Testpage.jsx")).default : null;
-
 const ALL_THEMES = [
   { id: "cyberpunk", name: "Cyberpunk Warrior", emoji: "\u26A1", accent: "#00f0ff", glow: "rgba(0,240,255,0.5)", bg: "linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)", tagline: "NEON STREETS. CHROME SKIN." },
   { id: "mughal", name: "Mughal Emperor", emoji: "\uD83D\uDC51", accent: "#DAA520", glow: "rgba(218,165,32,0.5)", bg: "linear-gradient(135deg, #1a0a00 0%, #4a2000 50%, #8B6914 100%)", tagline: "GOLDEN THRONES. BOW DOWN." },
@@ -81,6 +78,9 @@ function Streak({ n }) {
 }
 
 export default function App() {
+  // State for dynamically loaded TestPage
+  const [TestPage, setTestPage] = useState(null);
+
   // If ?test in URL, show test page
   if (isTestMode && TestPage) return <TestPage />;
 
@@ -102,6 +102,13 @@ export default function App() {
   const fileRef = useRef(null);
 
   useEffect(() => { fetch(API_URL+"/api/health").then(r=>r.json()).then(d=>setBackend(d.hasToken?"ai":"mock")).catch(()=>setBackend("off")); }, []);
+
+  // Dynamically load TestPage if in test mode
+  useEffect(() => {
+    if (isTestMode) {
+      import("./Testpage.jsx").then(m => setTestPage(() => m.default)).catch(err => console.error("Failed to load TestPage:", err));
+    }
+  }, []);
 
   const MSGS = ["Scanning your face...","Entering the multiverse...","Painting your alter ego...","Rolling for rarity...","Adding dramatic flair...","Almost ready..."];
   useEffect(() => { if(!gen) return; let i=0; setMsg(MSGS[0]); const t=setInterval(()=>{i=(i+1)%MSGS.length;setMsg(MSGS[i]);},2500); return()=>clearInterval(t); }, [gen]);
