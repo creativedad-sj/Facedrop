@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 
-const API_URL = "";
+const API_URL = "https://facedrop-production.up.railway.app";
 
 // Check if test mode via URL param
 const isTestMode = typeof window !== "undefined" && window.location.search.includes("test");
