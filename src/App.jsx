@@ -1,38 +1,15 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 
-const API_URL = process.env.REACT_APP_API_URL || "https://facedrop-production.up.railway.app";
+const API_URL = "https://facedrop-production.up.railway.app";
 
 const ALL_THEMES = [
-  { id: "cyberpunk", name: "Cyberpunk", emoji: "⚡", accent: "#00f0ff", bg: "linear-gradient(135deg, #0f0c29 0%, #302b63 100%)", tagline: "NEON STREETS. CHROME SKIN." },
-  { id: "mughal", name: "Mughal", emoji: "👑", accent: "#DAA520", bg: "linear-gradient(135deg, #1a0a00 0%, #8B6914 100%)", tagline: "GOLDEN THRONES." },
-  { id: "anime", name: "Anime Hero", emoji: "🌸", accent: "#e91e8c", bg: "linear-gradient(135deg, #1a0033 0%, #e91e8c 100%)", tagline: "MAIN CHARACTER ENERGY." },
-  { id: "viking", name: "Viking", emoji: "⚔️", accent: "#7ba3c4", bg: "linear-gradient(135deg, #0d1117 0%, #2d4a5e 100%)", tagline: "FROST AND STEEL." },
-  { id: "bollywood", name: "Bollywood", emoji: "🎬", accent: "#ff2020", bg: "linear-gradient(135deg, #1a0000 0%, #8b0000 100%)", tagline: "DIALOGUE THAT KILLS." },
-  { id: "samurai", name: "Samurai Master", emoji: "🌙", accent: "#c4a882", bg: "linear-gradient(135deg, #0a0a0a 0%, #2d2418 100%)", tagline: "WAY OF THE BLADE." },
-  { id: "astronaut", name: "Astronaut", emoji: "🚀", accent: "#8b5cf6", bg: "linear-gradient(135deg, #020024 0%, #0d0d4a 100%)", tagline: "BEYOND THE STARS." },
-  { id: "pirate", name: "Pirate", emoji: "🏴‍☠️", accent: "#a35b2a", bg: "linear-gradient(135deg, #1a0f00 0%, #3d2400 100%)", tagline: "SEAS OF GOLD." },
-  { id: "greek_god", name: "Olympian", emoji: "🏛️", accent: "#ffd700", bg: "linear-gradient(135deg, #f0f0f0 0%, #ffd700 100%)", tagline: "MORTALS WILL BOW." },
-  { id: "steampunk", name: "Steampunk", emoji: "⚙️", accent: "#cd7f32", bg: "linear-gradient(135deg, #2b1d0e 0%, #4d3319 100%)", tagline: "STEAM AND BRASS." },
-  { id: "wasteland", name: "Wasteland", emoji: "🌵", accent: "#c2b280", bg: "linear-gradient(135deg, #2c251d 0%, #4a3f30 100%)", tagline: "SURVIVE THE DUST." },
-  { id: "cyber_ninja", name: "Cyber Ninja", emoji: "🥷", accent: "#9d00ff", bg: "linear-gradient(135deg, #0a001a 0%, #26004d 100%)", tagline: "SHADOWS IN NEON." },
-  { id: "vampire", name: "Vampire", emoji: "🦇", accent: "#800000", bg: "linear-gradient(135deg, #120000 0%, #300000 100%)", tagline: "ETERNAL NIGHT." },
-  { id: "knight", name: "Paladin", emoji: "🛡️", accent: "#c0c0c0", bg: "linear-gradient(135deg, #1a1a1a 0%, #333 100%)", tagline: "HONOR AND IRON." },
-  { id: "forest_druid", name: "Druid", emoji: "🌿", accent: "#228b22", bg: "linear-gradient(135deg, #0a1a0a 0%, #1a331a 100%)", tagline: "THE FOREST SPEAKS." },
-  { id: "noir", name: "Detective", emoji: "🕵️", accent: "#ffffff", bg: "linear-gradient(135deg, #000 0%, #222 100%)", tagline: "RAIN AND SECRETS." },
-  { id: "atlantis", name: "Atlantis", emoji: "🔱", accent: "#00ced1", bg: "linear-gradient(135deg, #001a1a 0%, #004d4d 100%)", tagline: "DEPTHS OF POWER." },
-  { id: "egyptian", name: "Pharaoh", emoji: "🏺", accent: "#ffd700", bg: "linear-gradient(135deg, #3d2b00 0%, #664d00 100%)", tagline: "SANDS OF TIME." },
-  { id: "cyber_hacker", name: "Hacker", emoji: "💻", accent: "#39ff14", bg: "linear-gradient(135deg, #000 0%, #001a00 100%)", tagline: "ROOT THE WORLD." },
-  { id: "ice_monarch", name: "Ice Monarch", emoji: "❄️", accent: "#afeeee", bg: "linear-gradient(135deg, #0a1a2a 0%, #1a3a5a 100%)", tagline: "FROZEN HEART." },
-  { id: "wild_west", name: "Outlaw", emoji: "🤠", accent: "#8b4513", bg: "linear-gradient(135deg, #3d1a00 0%, #663300 100%)", tagline: "WESTERN JUSTICE." },
-  { id: "gladiator", name: "Gladiator", emoji: "🏟️", accent: "#cd5c5c", bg: "linear-gradient(135deg, #2a0a0a 0%, #4d1a1a 100%)", tagline: "BLOOD AND GLORY." },
-  { id: "elven", name: "Elf Ranger", emoji: "🏹", accent: "#90ee90", bg: "linear-gradient(135deg, #0a1a0a 0%, #1a3a1a 100%)", tagline: "SILVER ARROWS." },
-  { id: "wizard", name: "Wizard", emoji: "🧙", accent: "#4169e1", bg: "linear-gradient(135deg, #000a1a 0%, #001a4d 100%)", tagline: "ARCANE MASTERY." },
-  { id: "cyber_medic", name: "Nano Doctor", emoji: "💉", accent: "#ff69b4", bg: "linear-gradient(135deg, #1a001a 0%, #4d004d 100%)", tagline: "HEAL THE FUTURE." },
-  { id: "solarpunk", name: "Solarpunk", emoji: "☀️", accent: "#7cfc00", bg: "linear-gradient(135deg, #001a00 0%, #004d00 100%)", tagline: "GREEN UTOPIA." },
-  { id: "superhero", name: "Superhero", emoji: "🦸", accent: "#ff0000", bg: "linear-gradient(135deg, #1a0000 0%, #4d0000 100%)", tagline: "SAVE THE CITY." },
-  { id: "monk", name: "Martial Monk", emoji: "🧘", accent: "#ff8c00", bg: "linear-gradient(135deg, #1a0f00 0%, #4d2b00 100%)", tagline: "INNER PEACE." },
-  { id: "racer", name: "Speedster", emoji: "🏎️", accent: "#ffff00", bg: "linear-gradient(135deg, #000 0%, #222 100%)", tagline: "BREAK THE LIMIT." },
-  { id: "sorcerer", name: "Sorcerer", emoji: "🔮", accent: "#4b0082", bg: "linear-gradient(135deg, #0a001a 0%, #2a004d 100%)", tagline: "DARK FORCES." }
+  { id: "cyberpunk", name: "Cyberpunk Warrior", emoji: "\u26A1", accent: "#00f0ff", glow: "rgba(0,240,255,0.5)", bg: "linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)", style: "Video game", prompt: "cyberpunk warrior, neon city, glowing lights, chrome armor, futuristic, cinematic", tagline: "NEON STREETS. CHROME SKIN." },
+  { id: "mughal", name: "Mughal Emperor", emoji: "\uD83D\uDC51", accent: "#DAA520", glow: "rgba(218,165,32,0.5)", bg: "linear-gradient(135deg, #1a0a00 0%, #4a2000 50%, #8B6914 100%)", style: "3D", prompt: "royal emperor, golden throne, jeweled crown, silk robes, ornate palace, warm lighting", tagline: "GOLDEN THRONES. BOW DOWN." },
+  { id: "anime", name: "Anime Hero", emoji: "\uD83C\uDF38", accent: "#e91e8c", glow: "rgba(233,30,140,0.5)", bg: "linear-gradient(135deg, #1a0033 0%, #2d1b69 50%, #e91e8c 100%)", style: "Emoji", prompt: "anime hero, cherry blossom, dramatic wind, glowing aura, vibrant colors", tagline: "MAIN CHARACTER ENERGY." },
+  { id: "viking", name: "Viking Legend", emoji: "\u2694\uFE0F", accent: "#7ba3c4", glow: "rgba(123,163,196,0.5)", bg: "linear-gradient(135deg, #0d1117 0%, #1a2332 50%, #2d4a5e 100%)", style: "Video game", prompt: "viking warrior, snowy mountains, fur armor, battle axe, stormy sky, epic", tagline: "FROST AND STEEL." },
+  { id: "bollywood", name: "Bollywood Villain", emoji: "\uD83C\uDFAC", accent: "#ff2020", glow: "rgba(255,32,32,0.5)", bg: "linear-gradient(135deg, #1a0000 0%, #4a0000 50%, #8b0000 100%)", style: "3D", prompt: "bollywood star, dramatic red gold background, intense, designer suit, cinematic", tagline: "DIALOGUE THAT KILLS." },
+  { id: "samurai", name: "Samurai Master", emoji: "\uD83C\uDF19", accent: "#c4a882", glow: "rgba(196,168,130,0.5)", bg: "linear-gradient(135deg, #0a0a0a 0%, #1a1510 50%, #2d2418 100%)", style: "3D", prompt: "samurai master, japanese temple, cherry blossom, katana, golden hour, cinematic", tagline: "THE WAY OF THE BLADE." },
+  { id: "astronaut", name: "Space Explorer", emoji: "\uD83D\uDE80", accent: "#8b5cf6", glow: "rgba(139,92,246,0.5)", bg: "linear-gradient(135deg, #020024 0%, #090979 50%, #0d0d4a 100%)", style: "3D", prompt: "astronaut explorer, space station, earth in background, helmet reflection, cinematic, epic", tagline: "BEYOND THE STARS." },
 ];
 
 const RARITIES = [
@@ -97,41 +74,12 @@ function Streak({ n }) {
   );
 }
 
-function GenderSelector({ gender, setGender }) {
-  return (
-    <div style={{ marginBottom: 20, textAlign: 'center' }}>
-      <div style={{ fontSize: 10, color: '#666', letterSpacing: 2, marginBottom: 10 }}>IDENTITY</div>
-      <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
-        {['male', 'female', 'neutral'].map((g) => (
-          <button
-            key={g}
-            onClick={() => setGender(g)}
-            style={{
-              flex: 1,
-              padding: 10,
-              borderRadius: 8,
-              background: gender === g ? '#fff' : '#111',
-              color: gender === g ? '#000' : '#ccc',
-              border: '1px solid rgba(255,255,255,0.08)',
-              fontSize: 11,
-              cursor: 'pointer',
-            }}
-          >
-            {g.toUpperCase()}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 export default function App() {
   const [screen, setScreen] = useState("home");
   const [face, setFace] = useState(() => ld("face", null));
   const [faceId, setFaceId] = useState(() => ld("fid", null));
   const [coll, setColl] = useState(() => ld("coll", []));
-  const dailyTheme = useMemo(() => getDailyTheme(), []);
-  const theme = dailyTheme;
+  const theme = useMemo(() => getDailyTheme(), []);
   const today = getTodayKey();
   const [claimed, setClaimed] = useState(() => ld("claim","") === today);
   const [streak, setStreak] = useState(() => ld("streak", 0));
@@ -160,47 +108,32 @@ export default function App() {
     setScreen("home");
   }, [backend]);
 
-  // Add 'gender' and 'debugTheme' to your state at the top of App()
-  const [gender, setGender] = useState(() => ld("gender", "neutral"));
-  const [testTheme, setTestTheme] = useState(null); // Used for Debug mode
+  const generate = useCallback(async () => {
+    if (claimed) return;
+    setGen(true); setScreen("reveal"); setPhase(0); setCardImg(null);
+    const r = rollRarity(streak); setRar(r);
+    setTimeout(() => setPhase(1), 300);
 
-  useEffect(() => { sv("gender", gender); }, [gender]);
+    let ai = null;
+    if (backend === "ai" && faceId) {
+      try {
+        const res = await fetch(API_URL+"/api/generate-card",{ method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({faceId,themeId:theme.id}) });
+        const data = await res.json();
+        if (data.imageUrl) ai = API_URL + data.imageUrl;
+      } catch {}
+    }
 
-  const generate = useCallback(async (forcedTheme = null) => {
-  if (claimed && !forcedTheme) return; // Daily check
-  
-  const targetTheme = forcedTheme || dailyTheme;
-  setTestTheme(forcedTheme); // Track if this is a debug test
-  
-  setGen(true); setScreen("reveal"); setPhase(0); setCardImg(null);
-  const r = rollRarity(streak); setRar(r);
-  
-  try {
-    const res = await fetch(API_URL + "/api/generate-card", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ 
-        faceId, 
-        themeId: targetTheme.id, 
-        gender // Sent to backend
-      })
-    });
-    const data = await res.json();
-    if (data.imageUrl) setCardImg(API_URL + data.imageUrl);
-  } catch (e) { console.error(e); }
-  
-  setGen(false);
-  // ... existing phase animation code ...
-}, [faceId, gender, dailyTheme, claimed]);
+    setCardImg(ai); setGen(false);
+    setPhase(2);
+    setTimeout(() => setPhase(3), 1200);
+    setTimeout(() => setPhase(4), 2400);
+    setTimeout(() => setPhase(5), 3200);
+    setTimeout(() => setPhase(6), 4000);
+  }, [claimed, streak, backend, faceId, theme]);
 
   const collect = useCallback(() => {
-     // Use the testTheme if it exists, otherwise the dailyTheme
-  const themeToSave = testTheme || dailyTheme;
-     setColl(prev => [{ theme: themeToSave, rarity: rar, image: cardImg || face, date: today, id: Date.now() }, ...prev]);
-       if (!testTheme) {
+    setColl(prev => [{ theme, rarity:rar, image:cardImg||face, isAI:!!cardImg, date:today, id:Date.now() }, ...prev]);
     setClaimed(true); sv("claim", today);
-  }
-    
     const prev = ld("claimDate","");
     const y = new Date(); y.setDate(y.getDate()-1);
     const yk = y.getFullYear()+"-"+String(y.getMonth()+1).padStart(2,"0")+"-"+String(y.getDate()).padStart(2,"0");
@@ -208,8 +141,6 @@ export default function App() {
     setStreak(ns); sv("streak",ns); sv("claimDate",today);
     setScreen("collected");
     setTimeout(() => setScreen("home"), 2200);
-      setTestTheme(null); // Clear debug state
-
   }, [theme, rar, cardImg, face, today, streak]);
 
   const share = useCallback(() => {
@@ -222,7 +153,7 @@ export default function App() {
   const total = coll.length, legs = coll.filter(c=>c.rarity===3).length, epics = coll.filter(c=>c.rarity===2).length;
 
   return (
-    <div style={{ minHeight:"100vh", background:"#08080e", color:"#fff", fontFamily:"var(--fb)", position:"relative", overflowX:"hidden" }}>
+    <div style={{ minHeight:"100vh", background:"#08080e", color:"#fff", fontFamily:"var(--fb)", position:"relative", overflow:"hidden" }}>
       <style>{CSS}</style>
       <div style={{ position:"fixed",inset:0,background:"radial-gradient(ellipse at 20% 10%,rgba(100,50,255,.06) 0%,transparent 50%),radial-gradient(ellipse at 80% 90%,rgba(255,50,100,.04) 0%,transparent 50%)",pointerEvents:"none",zIndex:0 }} />
 
@@ -261,7 +192,6 @@ export default function App() {
         {screen==="home" && face && (
           <div style={{ animation:"slideUp .4s ease" }}>
             <div style={{ textAlign:"center", marginBottom:18 }}><Streak n={streak} /></div>
-            <GenderSelector gender={gender} setGender={setGender} />
             <div style={{ borderRadius:20, overflow:"hidden", background:theme.bg, border:"1px solid "+theme.accent+"33", position:"relative" }}>
               <div style={{ padding:"32px 24px 20px", textAlign:"center" }}>
                 <div style={{ fontSize:11, fontFamily:"var(--fd)", letterSpacing:5, color:"rgba(255,255,255,.5)", marginBottom:10 }}>{new Date().toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"}).toUpperCase()}</div>
@@ -296,10 +226,6 @@ export default function App() {
             <div style={{ textAlign:"center", marginTop:16 }}>
               <input ref={fileRef} type="file" accept="image/*" capture="user" style={{ display:"none" }} onChange={uploadFace} />
               <button onClick={()=>fileRef.current&&fileRef.current.click()} style={{ background:"none", border:"none", color:"#666", fontSize:11, fontFamily:"var(--fd)", letterSpacing:3, cursor:"pointer", padding:8 }}>CHANGE FACE</button>
-            </div>
-
-            <div style={{ textAlign:"center", marginTop:14 }}>
-              <button onClick={()=>setScreen("profile")} style={{ padding:"12px 16px", background:"rgba(255,255,255,.05)", color:"#fff", border:"1px solid rgba(255,255,255,.1)", borderRadius:12, fontSize:11, fontFamily:"var(--fd)", letterSpacing:2, cursor:"pointer" }}>OPEN DEBUG MODE</button>
             </div>
 
             {coll.length > 0 && (
@@ -423,8 +349,6 @@ export default function App() {
 
         {/* PROFILE */}
         {screen==="profile" && (
-            <div>
-              <GenderSelector gender={gender} setGender={setGender} />
           <div style={{ animation:"slideUp .4s ease" }}>
             <div style={{ textAlign:"center", marginBottom:24 }}>
               {face && <div style={{ width:80,height:80,borderRadius:"50%",margin:"0 auto 14px",overflow:"hidden",border:"2px solid rgba(255,255,255,.12)" }}><img src={face} alt="" style={{ width:"100%",height:"100%",objectFit:"cover" }} /></div>}
@@ -447,20 +371,6 @@ export default function App() {
               <span style={{ fontSize:11,fontFamily:"var(--fd)",letterSpacing:2,color:"#888" }}>{backend==="ai"?"AI GENERATION ACTIVE":backend==="mock"?"MOCK MODE":"CSS FILTER MODE"}</span>
             </div>
           </div>
-           {/* DEBUG GALLERY */}
-    <div style={{ borderTop: "1px solid #222", paddingTop: 20 }}>
-      <p style={{ fontSize: 10, fontWeight: 700, color: "#ffaaaa", textAlign: "center", letterSpacing: 2, marginBottom: 10 }}>DEBUG: TEST ALL THEMES</p>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>
-        {ALL_THEMES.map(t => (
-          <button key={t.id} onClick={() => generate(t)} style={{ fontSize: 10, padding: 10, background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.08)", color: "#fff", borderRadius: 8, minHeight: 38, textAlign: "center", cursor: "pointer" }}>
-            <div style={{ fontSize: 14 }}>{t.emoji}</div>
-            <div style={{ marginTop: 4, lineHeight: 1.2 }}>{t.name}</div>
-          </button>
-        ))}
-      </div>
-    </div>
-  </div>
-
         )}
 
         <div style={{ height:48 }} />
