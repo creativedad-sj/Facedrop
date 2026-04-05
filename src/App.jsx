@@ -79,10 +79,14 @@ function Streak({ n }) {
 
 export default function App() {
   // State for dynamically loaded TestPage
-  const [TestPage, setTestPage] = useState(null);
+  const [TestPageModule, setTestPageModule] = useState(null);
+  const [showTestPage, setShowTestPage] = useState(false);
 
   // If ?test in URL, show test page
-  if (isTestMode && TestPage) return <TestPage />;
+  if (showTestPage && TestPageModule) {
+    const TestPageComponent = TestPageModule.default;
+    return <TestPageComponent />;
+  }
 
   const [screen, setScreen] = useState("home");
   const [face, setFace] = useState(() => ld("face", null));
@@ -106,7 +110,15 @@ export default function App() {
   // Dynamically load TestPage if in test mode
   useEffect(() => {
     if (isTestMode) {
-      import("./Testpage.jsx").then(m => setTestPage(() => m.default)).catch(err => console.error("Failed to load TestPage:", err));
+      import("./Testpage.jsx")
+        .then(m => {
+          setTestPageModule(m);
+          setShowTestPage(true);
+        })
+        .catch(err => {
+          console.error("Failed to load TestPage:", err);
+          setShowTestPage(false);
+        });
     }
   }, []);
 
