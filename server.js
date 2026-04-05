@@ -70,6 +70,7 @@ app.get("/api/health", (req, res) => {
 
 app.post("/api/upload-face", upload.single("face"), (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No file" });
+  if (req.file.size > 5 * 1024 * 1024) return res.status(400).json({ error: "File too large (max 5MB)" });
   const ext = path.extname(req.file.originalname) || ".jpg";
   const newPath = req.file.path + ext;
   fs.renameSync(req.file.path, newPath);
