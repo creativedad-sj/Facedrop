@@ -18,13 +18,38 @@ const REPLICATE_API_TOKEN = process.env.REPLICATE_API_TOKEN || "YOUR_TOKEN_HERE"
 const PORT = process.env.PORT || 3001;
 
 // ============================================
-// GENDER-AWARE THEME PROMPTS
-// {g} is replaced with gender-specific words
+// OPTIMIZED PuLID PARAMETERS (from official docs)
+//
+// KEY FINDINGS FROM RESEARCH:
+//
+// 1. true_cfg = 2 (was 1/disabled)
+//    Official docs: "For stylized scenes, use true CFG
+//    for higher ID similarity AND better style response"
+//    This is the BIGGEST fix - enables real CFG process
+//
+// 2. id_weight = 1.5 (was 1.0)
+//    Range is 0-3. Higher = stronger face identity.
+//    1.5 gives strong identity without artifacts
+//
+// 3. start_step = 0 (keep at 0)
+//    0 = max face fidelity, inserted from first step
+//    Official: "For stylized images, set to 0-1"
+//
+// 4. guidance_scale = 3 (was 4)
+//    Lower guidance = less aggressive prompt following
+//    = more room for face identity preservation
+//
+// 5. ALL prompts must say "looking directly at camera"
+//    and "front-facing portrait" - prevents face rotation
+//    which causes identity loss
+//
+// 6. num_steps = 20 (keep, good balance)
 // ============================================
+
 function buildPrompt(template, gender) {
   const g = {
-    male: { person: "a man", subject: "he", possessive: "his", title: "emperor", warrior: "warrior", villain: "villain", master: "master", explorer: "explorer", hero: "hero" },
-    female: { person: "a woman", subject: "she", possessive: "her", title: "empress", warrior: "warrior queen", villain: "villainess", master: "master", explorer: "explorer", hero: "heroine" },
+    male: { person: "a man", subject: "he", possessive: "his", title: "emperor", warrior: "warrior", villain: "villain", master: "master", explorer: "explorer", hero: "hero", desc: "a man with facial hair" },
+    female: { person: "a woman", subject: "she", possessive: "her", title: "empress", warrior: "warrior queen", villain: "villainess", master: "master", explorer: "explorer", hero: "heroine", desc: "a woman" },
   };
   const words = g[gender] || g["male"];
   return template
@@ -36,49 +61,54 @@ function buildPrompt(template, gender) {
     .replace(/{villain}/g, words.villain)
     .replace(/{master}/g, words.master)
     .replace(/{explorer}/g, words.explorer)
-    .replace(/{hero}/g, words.hero);
+    .replace(/{hero}/g, words.hero)
+    .replace(/{desc}/g, words.desc);
 }
 
+// ============================================
+// PROMPTS — ALL enforce front-facing, camera-looking
+// This is critical for face preservation
+// ============================================
 const THEMES = {
   cyberpunk: {
-    pulid: "portrait of {person} as a cyberpunk {warrior} standing in a rain-soaked neon-lit Tokyo alley at night, wearing futuristic chrome and black tactical armor with glowing cyan LED strips, massive holographic pink and blue advertisements behind them, rain reflecting neon on wet street, blade runner cinematic lighting, dramatic, hyper detailed 8k photograph",
-    scene: "a cinematic portrait of a cyberpunk {warrior} standing in a rain-soaked neon-lit Tokyo alley at night, chrome tactical armor with cyan LEDs, holographic billboards, blade runner aesthetic, dramatic lighting, 8k, face clearly visible, portrait 3:4",
+    pulid: "close-up cinematic portrait of {desc} looking directly at the camera, as a cyberpunk {warrior}, wearing futuristic chrome and black tactical armor with glowing cyan LED strips on chest and shoulders, standing in a rain-soaked neon-lit Tokyo alley at night, massive holographic pink and blue advertisements glowing behind them, rain reflecting neon on wet street, blade runner cinematic lighting, dramatic, sharp focus on face, hyper detailed 8k photograph",
+    scene: "a cinematic portrait of a cyberpunk {warrior} looking at camera, chrome tactical armor with cyan LEDs, neon Tokyo alley, holographic billboards, blade runner, dramatic lighting, 8k, portrait 3:4",
     fallback_style: "Video game",
     fallback: "cyberpunk warrior, neon rain city, chrome armor, cyan LEDs, blade runner, cinematic",
   },
   mughal: {
-    pulid: "portrait of {person} as a powerful Mughal {title} seated on an ornate golden throne in a palace, wearing magnificent brocade silk sherwani with gold embroidery, jeweled turban with peacock feather and diamond ornament, heavy gold necklaces with rubies and emeralds, intricate marble inlay walls, warm golden candlelight, oil painting masterpiece, Rembrandt lighting, ultra detailed 8k",
-    scene: "a cinematic portrait of a Mughal {title} on an ornate golden throne in the Diwan-i-Khas palace, jeweled turban with peacock feather, brocade silk with gold embroidery, gold necklaces with rubies, marble inlay, warm candlelight, oil painting masterpiece, 8k, face clearly visible, portrait 3:4",
+    pulid: "close-up cinematic portrait of {desc} looking directly at the camera, as a powerful Mughal {title} seated on an ornate golden throne in a grand palace, wearing magnificent brocade silk sherwani with heavy gold embroidery, jeweled turban with peacock feather and diamond ornament, heavy gold necklaces with rubies and emeralds, intricate marble inlay walls behind, warm golden candlelight, oil painting masterpiece, Rembrandt lighting, sharp focus on face, ultra detailed 8k",
+    scene: "a Mughal {title} on golden throne looking at camera, jeweled turban, brocade silk sherwani, marble palace, candlelight, oil painting, 8k, portrait 3:4",
     fallback_style: "3D",
-    fallback: "mughal emperor, golden throne, jeweled turban, brocade silk, marble palace, candlelight, regal",
+    fallback: "mughal emperor, golden throne, jeweled turban, brocade silk, marble palace, regal",
   },
   anime: {
-    pulid: "portrait of {person} as an anime {hero} standing on a Tokyo skyscraper rooftop at sunset, wearing a dramatic flowing black coat with red lining billowing in wind, cherry blossom petals swirling around them, city below with dramatic orange and purple sky, vibrant saturated colors, anime-inspired cinematic composition, detailed 8k",
-    scene: "an anime {hero} standing on a Tokyo skyscraper rooftop at sunset, flowing black coat with red lining in wind, cherry blossom petals, dramatic orange purple sky, vibrant colors, anime-inspired cinematic, 8k, face clearly visible, portrait 3:4",
+    pulid: "close-up cinematic portrait of {desc} looking directly at the camera, as an anime {hero} standing on a Tokyo skyscraper rooftop at sunset, wearing a dramatic flowing black coat with red lining billowing in wind, cherry blossom petals swirling around, city stretching below with dramatic orange and purple sky, vibrant saturated colors, anime-inspired cinematic composition, sharp focus on face, detailed 8k",
+    scene: "an anime {hero} on skyscraper rooftop looking at camera, black coat with red lining, cherry blossoms, sunset Tokyo, dramatic sky, vibrant anime style, 8k, portrait 3:4",
     fallback_style: "Emoji",
     fallback: "anime hero, skyscraper rooftop, flowing black coat, cherry blossoms, sunset, dramatic",
   },
   viking: {
-    pulid: "portrait of {person} as a fearsome Viking {warrior} standing on a snowy cliff overlooking a fjord, wearing heavy bear fur cloak over chainmail armor, blue war paint in Norse patterns on {possessive} face, holding a massive battle axe, dragon-headed longship in icy water below, dramatic overcast sky with golden rays, epic Lord of the Rings aesthetic, hyper detailed 8k photograph",
-    scene: "a Viking {warrior} on a snowy cliff over a fjord, bear fur cloak over chainmail, horned helmet, blue war paint, battle axe, longship below, dramatic overcast sky with light rays, epic cinematic, 8k, face clearly visible, portrait 3:4",
+    pulid: "close-up cinematic portrait of {desc} looking directly at the camera, as a fearsome Viking {warrior} standing on a snowy cliff overlooking a fjord, wearing heavy bear fur cloak over chainmail armor, blue war paint in Norse patterns on {possessive} cheekbones, holding a massive battle axe, dragon-headed longship in icy water below, dramatic overcast sky with golden rays, epic Lord of the Rings aesthetic, sharp focus on face, hyper detailed 8k photograph",
+    scene: "a Viking {warrior} on snowy cliff looking at camera, bear fur cloak, chainmail, blue war paint, battle axe, fjord, longship, epic cinematic, 8k, portrait 3:4",
     fallback_style: "Video game",
     fallback: "viking warrior, bear fur cloak, chainmail, blue war paint, snowy cliff, fjord, epic",
   },
   bollywood: {
-    pulid: "portrait of {person} as a powerful Bollywood {villain} at a grand palace party, wearing perfectly tailored midnight black bandhgala suit with gold buttons, gold pocket square, heavy gold chain, confident menacing expression, crystal chandeliers, red velvet curtains, warm dramatic rim lighting, Sanjay Leela Bhansali cinematography, movie poster aesthetic, 8k cinematic photograph",
-    scene: "a powerful Bollywood {villain} at a grand palace party, black bandhgala suit with gold buttons, gold chain, confident expression, crystal chandeliers, red velvet, dramatic rim lighting, cinematic movie poster style, 8k, face clearly visible, portrait 3:4",
+    pulid: "close-up cinematic portrait of {desc} looking directly at the camera, as a powerful Bollywood {villain} at a grand palace party, wearing perfectly tailored midnight black bandhgala suit with gold buttons, gold pocket square, heavy gold chain around neck, confident menacing expression, crystal chandeliers and red velvet curtains behind, warm dramatic rim lighting, Sanjay Leela Bhansali cinematography, sharp focus on face, 8k cinematic photograph",
+    scene: "a Bollywood {villain} at palace party looking at camera, black bandhgala suit, gold chain, chandeliers, red velvet, rim lighting, cinematic, 8k, portrait 3:4",
     fallback_style: "3D",
     fallback: "bollywood villain, black bandhgala suit, gold chain, palace party, chandeliers, cinematic",
   },
   samurai: {
-    pulid: "portrait of {person} as a legendary samurai {master} in a serene Japanese temple garden during golden hour, wearing full traditional yoroi armor in black and gold with red silk cord binding, katana sheathed at {possessive} side, wooden temple with curved roofs behind, koi pond, cherry blossom petals in warm golden light, Akira Kurosawa cinematography, painterly, 8k photograph",
-    scene: "a legendary samurai {master} in a Japanese temple garden at golden hour, full yoroi armor black and gold, red silk bindings, katana at side, wooden temple, koi pond, cherry blossoms, golden light, Kurosawa cinematic, 8k, face clearly visible, portrait 3:4",
+    pulid: "close-up cinematic portrait of {desc} looking directly at the camera, as a legendary samurai {master} standing in a serene Japanese temple garden during golden hour, wearing full traditional yoroi armor in black lacquer and gold with red silk cord binding, katana sheathed at {possessive} side, wooden temple with curved roofs behind, koi pond, cherry blossom petals in warm golden light, Akira Kurosawa cinematography, sharp focus on face, 8k photograph",
+    scene: "a samurai {master} in temple garden looking at camera, yoroi armor black gold, red silk, katana, cherry blossoms, golden hour, Kurosawa, 8k, portrait 3:4",
     fallback_style: "3D",
     fallback: "samurai master, yoroi armor black gold, katana, temple garden, cherry blossoms, golden hour",
   },
   astronaut: {
-    pulid: "portrait of {person} as an {explorer} floating in space with Earth visible behind them, wearing detailed white NASA-style spacesuit with mission patches, visor reflecting blue Earth and stars, International Space Station in background, harsh sunlight creating dramatic contrast, Gravity movie IMAX aesthetic, photorealistic, hyper detailed 8k photograph",
-    scene: "an {explorer} floating in space, white NASA spacesuit with patches, Earth behind, visor reflecting blue marble and stars, ISS in background, harsh sun dramatic contrast, Gravity movie IMAX quality, 8k, face visible through clear visor, portrait 3:4",
+    pulid: "close-up cinematic portrait of {desc} looking directly at the camera through a clear transparent helmet visor, as an {explorer} floating in space, wearing detailed white NASA-style spacesuit with mission patches, blue marble of Earth visible behind, International Space Station in background, harsh sunlight from right creating dramatic contrast, Gravity movie IMAX aesthetic, sharp focus on face visible through visor, photorealistic 8k photograph",
+    scene: "an {explorer} in space looking at camera through visor, NASA spacesuit, Earth behind, ISS, dramatic sun, Gravity movie, 8k, portrait 3:4",
     fallback_style: "3D",
     fallback: "astronaut in space, NASA spacesuit, earth behind, ISS, dramatic sun, photorealistic",
   },
@@ -115,9 +145,7 @@ async function pollPrediction(predictionId, label) {
     const result = await response.json();
     console.log("    [" + label + "] Poll #" + (i + 1) + ": " + result.status);
     if (result.status === "succeeded") return result;
-    if (result.status === "failed" || result.status === "canceled") {
-      throw new Error(result.status + ": " + (result.error || "unknown"));
-    }
+    if (result.status === "failed" || result.status === "canceled") throw new Error(result.status + ": " + (result.error || "unknown"));
   }
   throw new Error("Timed out");
 }
@@ -157,11 +185,14 @@ async function callModel(url, body) {
 }
 
 // ============================================
-// Core generation function (reusable)
+// Core PuLID generation (reusable)
+// OPTIMIZED parameters for max face preservation
 // ============================================
 async function generateWithPuLID(faceDataUri, themeId, gender) {
   const theme = THEMES[themeId];
   const prompt = buildPrompt(theme.pulid, gender);
+
+  console.log("    Parameters: start_step=0, id_weight=1.5, true_cfg=2, guidance=3");
 
   const prediction = await callModel(
     "https://api.replicate.com/v1/predictions",
@@ -170,14 +201,14 @@ async function generateWithPuLID(faceDataUri, themeId, gender) {
       input: {
         main_face_image: faceDataUri,
         prompt: prompt,
-        negative_prompt: "(lowres, low quality, worst quality:1.2), watermark, deformed, mutated, cross-eyed, ugly, disfigured, bad anatomy, bad hands, text",
+        negative_prompt: "(lowres, low quality, worst quality:1.2), watermark, deformed, mutated, cross-eyed, ugly, disfigured, bad anatomy, bad hands, text, blurry, out of focus, face looking away, profile view, side view",
         width: 768,
         height: 1024,
         num_steps: 20,
-        start_step: 0,
-        guidance_scale: 4,
-        id_weight: 1.0,
-        true_cfg: 1,
+        start_step: 0,        // 0 = max face fidelity (official recommendation for stylized)
+        guidance_scale: 3,    // lower = less prompt aggression = better face preservation
+        id_weight: 1.5,       // 1.5 = strong identity (range 0-3, was 1.0)
+        true_cfg: 2,          // ENABLED! was 1 (disabled). Official: "use true CFG for stylized scenes"
         max_sequence_length: 128,
         output_format: "png",
         output_quality: 95,
@@ -196,8 +227,7 @@ async function generateWithPuLID(faceDataUri, themeId, gender) {
   const imageUrl = getImageUrl(result);
   if (!imageUrl) throw new Error("No output image");
 
-  const outputName = await downloadImage(imageUrl);
-  return outputName;
+  return await downloadImage(imageUrl);
 }
 
 // ============================================
@@ -217,12 +247,12 @@ app.post("/api/generate-card", async (req, res) => {
 
   console.log("");
   console.log("========================================");
-  console.log("  GENERATING: " + themeId.toUpperCase() + " | Gender: " + gender);
+  console.log("  GENERATING: " + themeId.toUpperCase() + " | " + gender);
   console.log("========================================");
 
-  // TIER 1: Flux PuLID
+  // TIER 1: Flux PuLID (optimized)
   try {
-    console.log("  [TIER 1] Flux PuLID...");
+    console.log("  [TIER 1] Flux PuLID (optimized params)...");
     const outputName = await generateWithPuLID(faceDataUri, themeId, gender);
     console.log("  TIER 1 SUCCESS! " + outputName);
     return res.json({ imageUrl: "/outputs/" + outputName, model: "flux-pulid", quality: "face-embedded" });
@@ -230,7 +260,7 @@ app.post("/api/generate-card", async (req, res) => {
     console.log("  TIER 1 FAILED: " + err.message);
   }
 
-  // TIER 2: Two-step
+  // TIER 2: Two-step (scene + face swap)
   try {
     console.log("  [TIER 2] Two-step pipeline...");
     const scenePrompt = buildPrompt(theme.scene, gender);
@@ -287,8 +317,7 @@ app.post("/api/generate-card", async (req, res) => {
 });
 
 // ============================================
-// TEST ALL THEMES — generates all 7 themes
-// Returns results as they complete via SSE
+// TEST ALL THEMES
 // ============================================
 app.post("/api/generate-test-all", async (req, res) => {
   const { faceId, gender = "male" } = req.body;
@@ -302,34 +331,30 @@ app.post("/api/generate-test-all", async (req, res) => {
 
   console.log("");
   console.log("============================================");
-  console.log("  TEST ALL THEMES | Gender: " + gender);
-  console.log("  Generating " + themeIds.length + " images...");
+  console.log("  TEST ALL | Gender: " + gender);
+  console.log("  Optimized: true_cfg=2, id_weight=1.5");
   console.log("============================================");
 
   const results = {};
 
-  // Generate sequentially to avoid rate limits
   for (const themeId of themeIds) {
-    console.log("  Generating: " + themeId + "...");
+    console.log("  --- " + themeId.toUpperCase() + " ---");
     try {
       const outputName = await generateWithPuLID(faceDataUri, themeId, gender);
       results[themeId] = { status: "success", imageUrl: "/outputs/" + outputName };
-      console.log("  " + themeId + " DONE: " + outputName);
+      console.log("  " + themeId + " DONE!");
     } catch (err) {
       results[themeId] = { status: "failed", error: err.message };
       console.log("  " + themeId + " FAILED: " + err.message);
     }
-
-    // Small delay between generations to avoid rate limits
     await new Promise((r) => setTimeout(r, 2000));
   }
 
-  console.log("  All themes complete!");
   res.json({ results });
 });
 
 // ============================================
-// TEST SINGLE THEME — quick test one theme
+// TEST SINGLE THEME
 // ============================================
 app.post("/api/generate-test-single", async (req, res) => {
   const { faceId, themeId, gender = "male" } = req.body;
@@ -340,7 +365,7 @@ app.post("/api/generate-test-single", async (req, res) => {
 
   const faceDataUri = fileToDataUri(facePath);
 
-  console.log("  TEST SINGLE: " + themeId + " | " + gender);
+  console.log("  TEST: " + themeId + " | " + gender + " | Optimized params");
   try {
     const outputName = await generateWithPuLID(faceDataUri, themeId, gender);
     res.json({ status: "success", themeId, imageUrl: "/outputs/" + outputName });
@@ -358,13 +383,16 @@ app.get("/api/debug/test-token", async (req, res) => {
 app.listen(PORT, () => {
   console.log("");
   console.log("============================================");
-  console.log("  FACEDROP v6.0 — Gender-Aware Engine");
+  console.log("  FACEDROP v7.0 — Optimized Face Engine");
   console.log("  Port: " + PORT);
   console.log("  Token: " + (REPLICATE_API_TOKEN !== "YOUR_TOKEN_HERE" ? "YES" : "MISSING"));
   console.log("");
-  console.log("  Endpoints:");
-  console.log("    POST /api/generate-card (single card)");
-  console.log("    POST /api/generate-test-all (all 7 themes)");
-  console.log("    POST /api/generate-test-single (test 1 theme)");
+  console.log("  PuLID Optimizations:");
+  console.log("    start_step: 0 (max face fidelity)");
+  console.log("    id_weight:  1.5 (was 1.0)");
+  console.log("    true_cfg:   2 (was 1/disabled)");
+  console.log("    guidance:   3 (was 4)");
+  console.log("    All prompts: front-facing, camera-looking");
+  console.log("    Negative: profile view, side view blocked");
   console.log("============================================");
 });
