@@ -1,22 +1,28 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 
-const API_URL = "https://facedrop-production.up.railway.app";
+const API_URL = "";
+
+// Check if test mode via URL param
+const isTestMode = typeof window !== "undefined" && window.location.search.includes("test");
+
+// Lazy load test page
+const TestPage = isTestMode ? (await import("./Testpage.jsx")).default : null;
 
 const ALL_THEMES = [
-  { id: "cyberpunk", name: "Cyberpunk Warrior", emoji: "\u26A1", accent: "#00f0ff", glow: "rgba(0,240,255,0.5)", bg: "linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)", style: "Video game", prompt: "cyberpunk warrior, neon city, glowing lights, chrome armor, futuristic, cinematic", tagline: "NEON STREETS. CHROME SKIN." },
-  { id: "mughal", name: "Mughal Emperor", emoji: "\uD83D\uDC51", accent: "#DAA520", glow: "rgba(218,165,32,0.5)", bg: "linear-gradient(135deg, #1a0a00 0%, #4a2000 50%, #8B6914 100%)", style: "3D", prompt: "royal emperor, golden throne, jeweled crown, silk robes, ornate palace, warm lighting", tagline: "GOLDEN THRONES. BOW DOWN." },
-  { id: "anime", name: "Anime Hero", emoji: "\uD83C\uDF38", accent: "#e91e8c", glow: "rgba(233,30,140,0.5)", bg: "linear-gradient(135deg, #1a0033 0%, #2d1b69 50%, #e91e8c 100%)", style: "Emoji", prompt: "anime hero, cherry blossom, dramatic wind, glowing aura, vibrant colors", tagline: "MAIN CHARACTER ENERGY." },
-  { id: "viking", name: "Viking Legend", emoji: "\u2694\uFE0F", accent: "#7ba3c4", glow: "rgba(123,163,196,0.5)", bg: "linear-gradient(135deg, #0d1117 0%, #1a2332 50%, #2d4a5e 100%)", style: "Video game", prompt: "viking warrior, snowy mountains, fur armor, battle axe, stormy sky, epic", tagline: "FROST AND STEEL." },
-  { id: "bollywood", name: "Bollywood Villain", emoji: "\uD83C\uDFAC", accent: "#ff2020", glow: "rgba(255,32,32,0.5)", bg: "linear-gradient(135deg, #1a0000 0%, #4a0000 50%, #8b0000 100%)", style: "3D", prompt: "bollywood star, dramatic red gold background, intense, designer suit, cinematic", tagline: "DIALOGUE THAT KILLS." },
-  { id: "samurai", name: "Samurai Master", emoji: "\uD83C\uDF19", accent: "#c4a882", glow: "rgba(196,168,130,0.5)", bg: "linear-gradient(135deg, #0a0a0a 0%, #1a1510 50%, #2d2418 100%)", style: "3D", prompt: "samurai master, japanese temple, cherry blossom, katana, golden hour, cinematic", tagline: "THE WAY OF THE BLADE." },
-  { id: "astronaut", name: "Space Explorer", emoji: "\uD83D\uDE80", accent: "#8b5cf6", glow: "rgba(139,92,246,0.5)", bg: "linear-gradient(135deg, #020024 0%, #090979 50%, #0d0d4a 100%)", style: "3D", prompt: "astronaut explorer, space station, earth in background, helmet reflection, cinematic, epic", tagline: "BEYOND THE STARS." },
+  { id: "cyberpunk", name: "Cyberpunk Warrior", emoji: "\u26A1", accent: "#00f0ff", glow: "rgba(0,240,255,0.5)", bg: "linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)", tagline: "NEON STREETS. CHROME SKIN." },
+  { id: "mughal", name: "Mughal Emperor", emoji: "\uD83D\uDC51", accent: "#DAA520", glow: "rgba(218,165,32,0.5)", bg: "linear-gradient(135deg, #1a0a00 0%, #4a2000 50%, #8B6914 100%)", tagline: "GOLDEN THRONES. BOW DOWN." },
+  { id: "anime", name: "Anime Hero", emoji: "\uD83C\uDF38", accent: "#e91e8c", glow: "rgba(233,30,140,0.5)", bg: "linear-gradient(135deg, #1a0033 0%, #2d1b69 50%, #e91e8c 100%)", tagline: "MAIN CHARACTER ENERGY." },
+  { id: "viking", name: "Viking Legend", emoji: "\u2694\uFE0F", accent: "#7ba3c4", glow: "rgba(123,163,196,0.5)", bg: "linear-gradient(135deg, #0d1117 0%, #1a2332 50%, #2d4a5e 100%)", tagline: "FROST AND STEEL." },
+  { id: "bollywood", name: "Bollywood Villain", emoji: "\uD83C\uDFAC", accent: "#ff2020", glow: "rgba(255,32,32,0.5)", bg: "linear-gradient(135deg, #1a0000 0%, #4a0000 50%, #8b0000 100%)", tagline: "DIALOGUE THAT KILLS." },
+  { id: "samurai", name: "Samurai Master", emoji: "\uD83C\uDF19", accent: "#c4a882", glow: "rgba(196,168,130,0.5)", bg: "linear-gradient(135deg, #0a0a0a 0%, #1a1510 50%, #2d2418 100%)", tagline: "THE WAY OF THE BLADE." },
+  { id: "astronaut", name: "Space Explorer", emoji: "\uD83D\uDE80", accent: "#8b5cf6", glow: "rgba(139,92,246,0.5)", bg: "linear-gradient(135deg, #020024 0%, #090979 50%, #0d0d4a 100%)", tagline: "BEYOND THE STARS." },
 ];
 
 const RARITIES = [
-  { name: "Common", color: "#9ca3af", particles: 0, shake: false },
-  { name: "Rare", color: "#60a5fa", particles: 8, shake: false },
-  { name: "Epic", color: "#c084fc", particles: 16, shake: true },
-  { name: "Legendary", color: "#fbbf24", particles: 30, shake: true },
+  { name: "Common", color: "#9ca3af", particles: 0 },
+  { name: "Rare", color: "#60a5fa", particles: 8 },
+  { name: "Epic", color: "#c084fc", particles: 16 },
+  { name: "Legendary", color: "#fbbf24", particles: 30 },
 ];
 
 function getTodayKey() { const d = new Date(); return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0"); }
@@ -75,9 +81,13 @@ function Streak({ n }) {
 }
 
 export default function App() {
+  // If ?test in URL, show test page
+  if (isTestMode && TestPage) return <TestPage />;
+
   const [screen, setScreen] = useState("home");
   const [face, setFace] = useState(() => ld("face", null));
   const [faceId, setFaceId] = useState(() => ld("fid", null));
+  const [gender, setGender] = useState(() => ld("gender", null)); // null = not selected yet
   const [coll, setColl] = useState(() => ld("coll", []));
   const theme = useMemo(() => getDailyTheme(), []);
   const today = getTodayKey();
@@ -105,8 +115,16 @@ export default function App() {
     if (backend !== "off") {
       try { const fd = new FormData(); fd.append("face",f); const r = await fetch(API_URL+"/api/upload-face",{method:"POST",body:fd}); const d = await r.json(); setFaceId(d.faceId); sv("fid",d.faceId); } catch {}
     }
+    // Go to gender selection if not set
+    if (!gender) setScreen("gender");
+    else setScreen("home");
+  }, [backend, gender]);
+
+  const selectGender = useCallback((g) => {
+    setGender(g);
+    sv("gender", g);
     setScreen("home");
-  }, [backend]);
+  }, []);
 
   const generate = useCallback(async () => {
     if (claimed) return;
@@ -117,7 +135,11 @@ export default function App() {
     let ai = null;
     if (backend === "ai" && faceId) {
       try {
-        const res = await fetch(API_URL+"/api/generate-card",{ method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({faceId,themeId:theme.id}) });
+        const res = await fetch(API_URL+"/api/generate-card",{
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({ faceId, themeId: theme.id, gender: gender || "male" }),
+        });
         const data = await res.json();
         if (data.imageUrl) ai = API_URL + data.imageUrl;
       } catch {}
@@ -129,7 +151,7 @@ export default function App() {
     setTimeout(() => setPhase(4), 2400);
     setTimeout(() => setPhase(5), 3200);
     setTimeout(() => setPhase(6), 4000);
-  }, [claimed, streak, backend, faceId, theme]);
+  }, [claimed, streak, backend, faceId, theme, gender]);
 
   const collect = useCallback(() => {
     setColl(prev => [{ theme, rarity:rar, image:cardImg||face, isAI:!!cardImg, date:today, id:Date.now() }, ...prev]);
@@ -145,7 +167,7 @@ export default function App() {
 
   const share = useCallback(() => {
     const img = cardImg || face; if(!img) return;
-    const a = document.createElement("a"); a.href = img; a.download = "facedrop_"+theme.id+"_"+today+".jpg"; a.click();
+    const a = document.createElement("a"); a.href = img; a.download = "facedrop_"+theme.id+"_"+today+".png"; a.click();
   }, [cardImg, face, theme, today]);
 
   const rarity = RARITIES[rar];
@@ -156,7 +178,6 @@ export default function App() {
     <div style={{ minHeight:"100vh", background:"#08080e", color:"#fff", fontFamily:"var(--fb)", position:"relative", overflow:"hidden" }}>
       <style>{CSS}</style>
       <div style={{ position:"fixed",inset:0,background:"radial-gradient(ellipse at 20% 10%,rgba(100,50,255,.06) 0%,transparent 50%),radial-gradient(ellipse at 80% 90%,rgba(255,50,100,.04) 0%,transparent 50%)",pointerEvents:"none",zIndex:0 }} />
-
       {phase===5 && rar===3 && <div style={{ position:"fixed",inset:0,background:"radial-gradient(circle,rgba(255,200,0,.35),transparent)",animation:"flash .8s ease forwards",zIndex:100,pointerEvents:"none" }} />}
 
       <div style={{ position:"relative", zIndex:1, maxWidth:440, margin:"0 auto", padding:"20px" }}>
@@ -167,42 +188,69 @@ export default function App() {
         </div>
 
         {/* Nav */}
-        {face && screen!=="reveal" && screen!=="collected" && (
+        {face && gender && screen!=="reveal" && screen!=="collected" && screen!=="gender" && (
           <div style={{ display:"flex", gap:8, marginBottom:20 }}>
             {[{k:"home",l:"TODAY"},{k:"collection",l:"CARDS "+total},{k:"profile",l:"ME"}].map(t => (
-              <button key={t.k} onClick={()=>setScreen(t.k)} style={{ flex:1, padding:"10px 0", background:screen===t.k?"rgba(255,255,255,.1)":"transparent", border:"1px solid "+(screen===t.k?"rgba(255,255,255,.15)":"rgba(255,255,255,.06)"), borderRadius:10, cursor:"pointer", color:screen===t.k?"#fff":"#666", fontSize:11, fontFamily:"var(--fd)", fontWeight:600, letterSpacing:3, transition:"all .2s" }}>{t.l}</button>
+              <button key={t.k} onClick={()=>setScreen(t.k)} style={{ flex:1, padding:"10px 0", background:screen===t.k?"rgba(255,255,255,.1)":"transparent", border:"1px solid "+(screen===t.k?"rgba(255,255,255,.15)":"rgba(255,255,255,.06)"), borderRadius:10, cursor:"pointer", color:screen===t.k?"#fff":"#666", fontSize:11, fontFamily:"var(--fd)", fontWeight:600, letterSpacing:3 }}>{t.l}</button>
             ))}
           </div>
         )}
 
-        {/* HOME: No face */}
+        {/* ============ GENDER SELECTION ============ */}
+        {screen === "gender" && (
+          <div style={{ textAlign:"center", paddingTop:40, animation:"slideUp .5s ease" }}>
+            <h2 style={{ fontSize:18, fontFamily:"var(--fd)", fontWeight:700, letterSpacing:4, marginBottom:8, color:"#fff" }}>ONE MORE THING</h2>
+            <p style={{ color:"#888", fontSize:14, marginBottom:32 }}>This helps us generate better themed images of you</p>
+
+            <div style={{ display:"flex", gap:16, justifyContent:"center" }}>
+              {[
+                { value: "male", emoji: "\uD83D\uDC68", label: "MALE" },
+                { value: "female", emoji: "\uD83D\uDC69", label: "FEMALE" },
+              ].map(opt => (
+                <button key={opt.value} onClick={() => selectGender(opt.value)} style={{
+                  width: 140, padding: "28px 16px",
+                  background: "rgba(255,255,255,0.04)",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  borderRadius: 16, cursor: "pointer",
+                  display: "flex", flexDirection: "column", alignItems: "center", gap: 12,
+                  transition: "all 0.2s",
+                }}>
+                  <span style={{ fontSize: 40 }}>{opt.emoji}</span>
+                  <span style={{ fontSize: 13, fontFamily: "var(--fd)", fontWeight: 700, letterSpacing: 3, color: "#ccc" }}>{opt.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ============ WELCOME — no face ============ */}
         {screen==="home" && !face && (
           <div style={{ textAlign:"center", paddingTop:60, animation:"slideUp .6s ease" }}>
             <div style={{ width:110,height:110,borderRadius:"50%",margin:"0 auto 32px",border:"2px solid rgba(255,255,255,.1)",display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(255,255,255,.03)" }}>
               <span style={{ fontSize:44 }}>{"\uD83C\uDFAD"}</span>
             </div>
-            <h2 style={{ fontSize:22, fontFamily:"var(--fd)", fontWeight:700, letterSpacing:4, marginBottom:14, color:"#fff" }}>YOUR FACE. ANY UNIVERSE.</h2>
-            <p style={{ color:"#999", fontSize:15, lineHeight:1.8, maxWidth:300, margin:"0 auto 36px", fontFamily:"var(--fb)" }}>One selfie. A new you, every day. Collect rare cards of yourself across infinite styles.</p>
+            <h2 style={{ fontSize:22, fontFamily:"var(--fd)", fontWeight:700, letterSpacing:4, marginBottom:14 }}>YOUR FACE. ANY UNIVERSE.</h2>
+            <p style={{ color:"#999", fontSize:15, lineHeight:1.8, maxWidth:300, margin:"0 auto 36px" }}>One selfie. A new you, every day. Collect rare cards of yourself across infinite styles.</p>
             <input ref={fileRef} type="file" accept="image/*" capture="user" style={{ display:"none" }} onChange={uploadFace} />
             <button onClick={()=>fileRef.current&&fileRef.current.click()} style={{ padding:"16px 48px", background:"#fff", color:"#000", border:"none", borderRadius:40, fontSize:13, fontFamily:"var(--fd)", fontWeight:800, letterSpacing:4, cursor:"pointer" }}>UPLOAD SELFIE</button>
           </div>
         )}
 
-        {/* HOME: Has face */}
-        {screen==="home" && face && (
+        {/* ============ HOME — has face ============ */}
+        {screen==="home" && face && gender && (
           <div style={{ animation:"slideUp .4s ease" }}>
             <div style={{ textAlign:"center", marginBottom:18 }}><Streak n={streak} /></div>
-            <div style={{ borderRadius:20, overflow:"hidden", background:theme.bg, border:"1px solid "+theme.accent+"33", position:"relative" }}>
+            <div style={{ borderRadius:20, overflow:"hidden", background:theme.bg, border:"1px solid "+theme.accent+"33" }}>
               <div style={{ padding:"32px 24px 20px", textAlign:"center" }}>
                 <div style={{ fontSize:11, fontFamily:"var(--fd)", letterSpacing:5, color:"rgba(255,255,255,.5)", marginBottom:10 }}>{new Date().toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"}).toUpperCase()}</div>
                 <div style={{ fontSize:44, marginBottom:10 }}>{theme.emoji}</div>
-                <h2 style={{ fontSize:22, fontFamily:"var(--fd)", fontWeight:800, letterSpacing:4, margin:"0 0 8px", color:"#fff" }}>{theme.name.toUpperCase()}</h2>
-                <p style={{ fontSize:12, fontFamily:"var(--fd)", letterSpacing:4, color:theme.accent, margin:0, fontWeight:600 }}>{theme.tagline}</p>
+                <h2 style={{ fontSize:22, fontFamily:"var(--fd)", fontWeight:800, letterSpacing:4, margin:"0 0 8px" }}>{theme.name.toUpperCase()}</h2>
+                <p style={{ fontSize:12, fontFamily:"var(--fd)", letterSpacing:4, color:theme.accent, fontWeight:600, margin:0 }}>{theme.tagline}</p>
               </div>
               <div style={{ padding:"0 24px 32px", textAlign:"center" }}>
                 {claimed ? (
                   <div>
-                    <div style={{ fontSize:13, fontFamily:"var(--fd)", letterSpacing:3, color:"rgba(255,255,255,.4)", marginBottom:16 }}>TODAY'S CARD CLAIMED {"\u2713"}</div>
+                    <div style={{ fontSize:13, fontFamily:"var(--fd)", letterSpacing:3, color:"rgba(255,255,255,.4)", marginBottom:16 }}>CLAIMED {"\u2713"}</div>
                     <Countdown />
                   </div>
                 ) : (
@@ -223,9 +271,12 @@ export default function App() {
               </div>
             </div>
 
-            <div style={{ textAlign:"center", marginTop:16 }}>
+            <div style={{ textAlign:"center", marginTop:16, display:"flex", justifyContent:"center", gap:16 }}>
               <input ref={fileRef} type="file" accept="image/*" capture="user" style={{ display:"none" }} onChange={uploadFace} />
               <button onClick={()=>fileRef.current&&fileRef.current.click()} style={{ background:"none", border:"none", color:"#666", fontSize:11, fontFamily:"var(--fd)", letterSpacing:3, cursor:"pointer", padding:8 }}>CHANGE FACE</button>
+              <button onClick={()=>setScreen("gender")} style={{ background:"none", border:"none", color:"#666", fontSize:11, fontFamily:"var(--fd)", letterSpacing:3, cursor:"pointer", padding:8 }}>
+                {(gender||"").toUpperCase()} {"\u270E"}
+              </button>
             </div>
 
             {coll.length > 0 && (
@@ -246,7 +297,7 @@ export default function App() {
           </div>
         )}
 
-        {/* REVEAL */}
+        {/* ============ REVEAL ============ */}
         {screen==="reveal" && (
           <div style={{ textAlign:"center", paddingTop:20, minHeight:"70vh", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center" }}>
             {(phase<=1||gen) && (
@@ -256,8 +307,8 @@ export default function App() {
                   <span style={{ fontSize:52, position:"relative" }}>{theme.emoji}</span>
                   <div style={{ fontSize:10, fontFamily:"var(--fd)", letterSpacing:4, color:"rgba(255,255,255,.45)", position:"relative" }}>{theme.name.toUpperCase()}</div>
                 </div>
-                <p style={{ color:"#999", fontSize:13, fontFamily:"var(--fb)", letterSpacing:3, marginTop:24, animation:"pulse 2s ease infinite" }}>{gen?msg.toUpperCase():"PREPARING..."}</p>
-                {backend==="ai"&&gen && <p style={{ color:"#666",fontSize:11,fontFamily:"var(--fb)",letterSpacing:2,marginTop:8 }}>AI takes 15-45 seconds</p>}
+                <p style={{ color:"#999", fontSize:13, letterSpacing:3, marginTop:24, animation:"pulse 2s ease infinite" }}>{gen?msg.toUpperCase():"PREPARING..."}</p>
+                {backend==="ai"&&gen && <p style={{ color:"#666",fontSize:11,letterSpacing:2,marginTop:8 }}>AI takes 15-45 seconds</p>}
               </div>
             )}
 
@@ -297,7 +348,7 @@ export default function App() {
           </div>
         )}
 
-        {/* COLLECTED */}
+        {/* ============ COLLECTED ============ */}
         {screen==="collected" && (
           <div style={{ textAlign:"center", paddingTop:80, animation:"scaleIn .5s ease" }}>
             <div style={{ fontSize:60, marginBottom:14 }}>{rar===3?"\uD83C\uDF1F":rar===2?"\u2728":"\u2705"}</div>
@@ -306,7 +357,7 @@ export default function App() {
           </div>
         )}
 
-        {/* COLLECTION */}
+        {/* ============ COLLECTION ============ */}
         {screen==="collection" && (
           <div style={{ animation:"slideUp .4s ease" }}>
             <div style={{ textAlign:"center", marginBottom:20 }}>
@@ -347,12 +398,13 @@ export default function App() {
           </div>
         )}
 
-        {/* PROFILE */}
+        {/* ============ PROFILE ============ */}
         {screen==="profile" && (
           <div style={{ animation:"slideUp .4s ease" }}>
             <div style={{ textAlign:"center", marginBottom:24 }}>
               {face && <div style={{ width:80,height:80,borderRadius:"50%",margin:"0 auto 14px",overflow:"hidden",border:"2px solid rgba(255,255,255,.12)" }}><img src={face} alt="" style={{ width:"100%",height:"100%",objectFit:"cover" }} /></div>}
               <Streak n={streak} />
+              {gender && <div style={{ marginTop:8, fontSize:11, fontFamily:"var(--fd)", letterSpacing:3, color:"#666" }}>{gender.toUpperCase()}</div>}
             </div>
             <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:8, marginBottom:20 }}>
               {[{l:"TOTAL",v:total,c:"#fff"},{l:"LEGENDARY",v:legs,c:"#fbbf24"},{l:"EPIC",v:epics,c:"#c084fc"}].map(s => (
@@ -364,7 +416,7 @@ export default function App() {
             </div>
             <div style={{ padding:"18px",borderRadius:14,background:"rgba(255,255,255,.03)",border:"1px solid rgba(255,255,255,.06)" }}>
               <div style={{ fontSize:11,fontFamily:"var(--fd)",letterSpacing:3,color:"#888",marginBottom:8 }}>STREAK BONUS</div>
-              <div style={{ fontSize:14,fontFamily:"var(--fb)",color:"#bbb",lineHeight:1.7 }}>Each day adds +0.5% Legendary chance. Current bonus: <span style={{ color:"#fbbf24",fontWeight:700 }}>+{(streak*.5).toFixed(1)}%</span></div>
+              <div style={{ fontSize:14,fontFamily:"var(--fb)",color:"#bbb",lineHeight:1.7 }}>Each day adds +0.5% Legendary chance. Bonus: <span style={{ color:"#fbbf24",fontWeight:700 }}>+{(streak*.5).toFixed(1)}%</span></div>
             </div>
             <div style={{ marginTop:14,padding:"14px",borderRadius:14,background:"rgba(255,255,255,.03)",border:"1px solid rgba(255,255,255,.06)",display:"flex",alignItems:"center",gap:10 }}>
               <div style={{ width:8,height:8,borderRadius:"50%",background:backend==="ai"?"#00ff88":backend==="mock"?"#ffaa00":"#ff4444" }} />
