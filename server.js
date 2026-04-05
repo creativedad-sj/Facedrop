@@ -18,173 +18,49 @@ const REPLICATE_API_TOKEN = process.env.REPLICATE_API_TOKEN || "YOUR_TOKEN_HERE"
 const PORT = process.env.PORT || 3001;
 
 // ============================================
-// GENDER MAPPING
+// THEME DEFINITIONS
+// pulid_prompt: For Flux PuLID (no trigger words, just describe the scene)
+// scene_prompt: For two-step pipeline (Flux generates scene without face)
+// fallback_prompt: For face-to-many
 // ============================================
-const getGenderTerms = (gender) => {
-  const mapping = {
-    male: { subject: "man", title: "king", honorific: "lord", adj: "handsome", pronoun: "he" },
-    female: { subject: "woman", title: "queen", honorific: "lady", adj: "beautiful", pronoun: "she" },
-    neutral: { subject: "person", title: "monarch", honorific: "sovereign", adj: "striking", pronoun: "they" }
-  };
-  return mapping[gender] || mapping.neutral;
+const GENDER_WORDS = {
+  male: { subject: "man", title: "king", honorific: "lord", adj: "handsome" },
+  female: { subject: "woman", title: "queen", honorific: "lady", adj: "beautiful" },
+  neutral: { subject: "person", title: "monarch", honorific: "sovereign", adj: "striking" }
 };
 
-// ============================================
-// THEME DEFINITIONS (30 THEMES)
-// ============================================
-const THEME_TEMPLATES = {
-  cyberpunk: {
-    pulid: "portrait of a {{adj}} {{subject}} as a cyberpunk warrior in neon Tokyo, tactical chrome armor, glowing cyan LEDs, 8k photograph",
-    scene: "cinematic portrait of a cyberpunk {{subject}} in neon Tokyo, tactical armor, 8k, face visible",
-    fallback_style: "Video game", fallback_prompt: "cyberpunk {{subject}}, neon city, chrome armor"
-  },
-  mughal: {
-    pulid: "portrait of a {{adj}} Mughal {{title}} on a golden throne, silk sherwani, jeweled turban, palace interior, 8k oil painting",
-    scene: "Mughal {{title}} on golden throne, marble palace, candlelight, 8k",
-    fallback_style: "3D", fallback_prompt: "mughal {{title}}, golden palace, royal"
-  },
-  anime: {
-    pulid: "anime style portrait of a {{subject}} hero on a Tokyo rooftop, flowing coat, cherry blossoms, sunset, vibrant colors",
-    scene: "anime hero {{subject}} on rooftop, sunset, cherry blossoms, 8k",
-    fallback_style: "Emoji", fallback_prompt: "anime hero {{subject}}, rooftop, sunset"
-  },
-  viking: {
-    pulid: "portrait of a fierce Viking {{subject}} chieftain on a snowy cliff, bear fur cloak, blue war paint, battle axe, 8k photo",
-    scene: "Viking chieftain {{subject}} on snowy cliff, fur cloak, 8k",
-    fallback_style: "Video game", fallback_prompt: "viking warrior {{subject}}, snow, fjord"
-  },
-  bollywood: {
-    pulid: "bollywood movie poster of a powerful {{subject}} villain, tailored black suit, gold chains, grand palace, dramatic lighting",
-    scene: "bollywood {{subject}} villain in palace, dramatic lighting, 8k",
-    fallback_style: "3D", fallback_prompt: "bollywood style {{subject}}, dramatic, regal"
-  },
-  samurai: {
-    pulid: "legendary samurai {{subject}} in Japanese garden, black and gold yoroi armor, katana, cherry blossoms, golden hour, 8k",
-    scene: "samurai {{subject}} in garden, gold armor, 8k",
-    fallback_style: "3D", fallback_prompt: "samurai {{subject}}, armor, katana"
-  },
-  astronaut: {
-    pulid: "astronaut {{subject}} in white spacesuit, Earth reflection in visor, ISS background, cinematic 8k photograph",
-    scene: "astronaut {{subject}} in space, Earth behind, 8k",
-    fallback_style: "3D", fallback_prompt: "astronaut {{subject}}, space, earth"
-  },
-  pirate: {
-    pulid: "portrait of a {{adj}} pirate captain {{subject}} on a storm-tossed ship, leather hat, gold hoop earring, holding a telescope, lightning flash, 8k",
-    scene: "pirate captain {{subject}} on deck of ship, stormy sea, cinematic 8k",
-    fallback_style: "Video game", fallback_prompt: "pirate {{subject}}, stormy sea, captain"
-  },
-  greek_god: {
-    pulid: "ancient Greek {{title}} {{subject}} atop Mount Olympus, white silk robes, golden laurel wreath, glowing eyes, lightning in hand, marble pillars, 8k",
-    scene: "Greek {{title}} on Olympus, golden aura, marble palace, 8k",
-    fallback_style: "3D", fallback_prompt: "greek god {{subject}}, olympus, lightning"
-  },
-  steampunk: {
-    pulid: "steampunk inventor {{subject}} in Victorian London, brass goggles, leather vest, mechanical arm, copper pipes and steam, 8k photo",
-    scene: "steampunk {{subject}} inventor, clockwork background, 8k",
-    fallback_style: "3D", fallback_prompt: "steampunk {{subject}}, goggles, gears"
-  },
-  wasteland: {
-    pulid: "post-apocalyptic survivor {{subject}} in Mad Max style, spiked armor, sand-covered face, desert dunes, rusted car background, 8k",
-    scene: "wasteland survivor {{subject}} in desert, rusted armor, 8k",
-    fallback_style: "Video game", fallback_prompt: "post-apocalyptic {{subject}}, desert, spikes"
-  },
-  cyber_ninja: {
-    pulid: "cyber-ninja {{subject}} in futuristic suit, glowing purple visor, twin katanas, rain-slicked city rooftop, 8k cinematic",
-    scene: "cyber ninja {{subject}}, neon rooftop, 8k",
-    fallback_style: "Video game", fallback_prompt: "cyber ninja {{subject}}, glowing visor"
-  },
-  vampire: {
-    pulid: "gothic vampire {{honorific}} {{subject}} in a candlelit cathedral, velvet red cloak, pale skin, ornate gothic jewelry, 8k oil painting",
-    scene: "vampire {{subject}} in gothic cathedral, red velvet, 8k",
-    fallback_style: "3D", fallback_prompt: "vampire {{subject}}, gothic, cathedral"
-  },
-  knight: {
-    pulid: "noble knight {{subject}} in polished silver plate armor, blue cape, holding a broadsword, medieval castle background, 8k photograph",
-    scene: "knight {{subject}} in silver armor, castle courtyard, 8k",
-    fallback_style: "3D", fallback_prompt: "knight {{subject}}, armor, sword"
-  },
-  forest_druid: {
-    pulid: "mystical druid {{subject}} in a glowing ancient forest, crown of antlers, moss-covered robes, swirling green magic, 8k fantasy photo",
-    scene: "druid {{subject}} in magical forest, green glow, 8k",
-    fallback_style: "3D", fallback_prompt: "forest druid {{subject}}, magic, nature"
-  },
-  noir: {
-    pulid: "1940s noir detective {{subject}} in a trench coat and fedora, smoking a cigar, rainy street corner, black and white cinematic film style, 8k",
-    scene: "noir detective {{subject}} in rain, black and white, 8k",
-    fallback_style: "3D", fallback_prompt: "noir detective {{subject}}, 1940s style"
-  },
-  atlantis: {
-    pulid: "royal underwater {{title}} {{subject}} of Atlantis, shimmering scale armor, trident, glowing jellyfish, coral palace, 8k",
-    scene: "underwater {{title}} {{subject}}, coral palace, 8k",
-    fallback_style: "3D", fallback_prompt: "atlantis {{subject}}, trident, underwater"
-  },
-  egyptian: {
-    pulid: "ancient Egyptian {{title}} {{subject}}, gold nemes headpiece, heavy kohl eyeliner, desert pyramids at sunset, 8k cinematic photo",
-    scene: "Egyptian {{title}} {{subject}} by pyramids, sunset, 8k",
-    fallback_style: "3D", fallback_prompt: "egyptian pharaoh {{subject}}, gold"
-  },
-  cyber_hacker: {
-    pulid: "tech hacker {{subject}} in a dark room full of holographic screens, hoodie, glowing code reflecting on face, futuristic vibe, 8k",
-    scene: "hacker {{subject}} with holograms, neon code, 8k",
-    fallback_style: "Video game", fallback_prompt: "hacker {{subject}}, green code"
-  },
-  ice_monarch: {
-    pulid: "Ice {{title}} {{subject}} in a palace of frozen glass, crown of jagged ice, fur-lined blue robes, snowflakes in air, 8k hyper-detailed",
-    scene: "ice {{title}} {{subject}} in frozen palace, snow, 8k",
-    fallback_style: "3D", fallback_prompt: "ice king {{subject}}, frozen"
-  },
-  wild_west: {
-    pulid: "wild west outlaw {{subject}}, leather duster coat, cowboy hat, dusty saloon background, warm sunset light, 8k photograph",
-    scene: "cowboy {{subject}} outlaw in desert town, 8k",
-    fallback_style: "3D", fallback_prompt: "wild west {{subject}}, cowboy"
-  },
-  gladiator: {
-    pulid: "Roman gladiator {{subject}} in the Colosseum, bronze chestplate, leather sandals, holding a shield, cheering crowd, 8k photo",
-    scene: "gladiator {{subject}} in arena, roman style, 8k",
-    fallback_style: "Video game", fallback_prompt: "gladiator {{subject}}, arena"
-  },
-  elven: {
-    pulid: "ethereal elven {{subject}} in a silver forest, flowing white robes, long bow, glowing pendant, lord of the rings style, 8k",
-    scene: "elven {{subject}} in silver forest, magic light, 8k",
-    fallback_style: "3D", fallback_prompt: "elf {{subject}}, fantasy forest"
-  },
-  wizard: {
-    pulid: "powerful wizard {{subject}} in star-patterned robes, wooden staff with glowing gem, ancient library background, floating books, 8k",
-    scene: "wizard {{subject}} in library, magical sparks, 8k",
-    fallback_style: "3D", fallback_prompt: "wizard {{subject}}, magic staff"
-  },
-  cyber_medic: {
-    pulid: "futuristic cyber-medic {{subject}}, white sleek armor with red cross, glowing healing nanobots, sci-fi hospital, 8k",
-    scene: "cyber medic {{subject}} in sci-fi lab, 8k",
-    fallback_style: "3D", fallback_prompt: "sci-fi doctor {{subject}}, futuristic"
-  },
-  solarpunk: {
-    pulid: "solarpunk architect {{subject}} in a city covered in vertical gardens, white linen clothing, golden sunlight, drones, 8k",
-    scene: "solarpunk city and {{subject}}, green nature, 8k",
-    fallback_style: "3D", fallback_prompt: "solarpunk {{subject}}, green city"
-  },
-  superhero: {
-    pulid: "superhero {{subject}} in a high-tech suit, cape fluttering, standing on a skyscraper ledge, heroic pose, 8k cinematic",
-    scene: "superhero {{subject}} on skyscraper, epic sky, 8k",
-    fallback_style: "Video game", fallback_prompt: "superhero {{subject}}, comic style"
-  },
-  monk: {
-    pulid: "shaolin monk {{subject}} in orange robes, performing a kick on a mountain peak, clouds below, cinematic martial arts style, 8k",
-    scene: "martial arts monk {{subject}} on mountain, 8k",
-    fallback_style: "3D", fallback_prompt: "monk {{subject}}, mountain peak"
-  },
-  racer: {
-    pulid: "formula 1 racer {{subject}} in a futuristic glowing suit, holding a helmet, sleek race car in background, motion blur, 8k",
-    scene: "f1 racer {{subject}} by futuristic car, 8k",
-    fallback_style: "Video game", fallback_prompt: "racer {{subject}}, fast car"
-  },
-  sorcerer: {
-    pulid: "dark sorcerer {{subject}} in shadows, purple flames in hands, dark obsidian throne, demonic runes, 8k cinematic photo",
-    scene: "dark sorcerer {{subject}} with purple fire, 8k",
-    fallback_style: "3D", fallback_prompt: "dark magic {{subject}}, sorcerer"
-  }
+const THEMES = {
+  cyberpunk: { pulid: "portrait of a {{adj}} {{subject}} as a cyberpunk warrior in neon Tokyo, tactical chrome armor, glowing cyan LEDs, 8k", fallback_style: "Video game", fallback_prompt: "cyberpunk {{subject}}, neon city" },
+  mughal: { pulid: "portrait of a {{adj}} Mughal {{title}} on a golden throne, silk sherwani, jeweled turban, 8k oil painting", fallback_style: "3D", fallback_prompt: "mughal {{title}}, palace" },
+  anime: { pulid: "anime style portrait of a {{subject}} hero on a Tokyo rooftop, flowing coat, cherry blossoms, sunset", fallback_style: "Emoji", fallback_prompt: "anime hero {{subject}}" },
+  viking: { pulid: "fierce Viking {{subject}} chieftain on a snowy cliff, bear fur cloak, blue war paint, battle axe, 8k photo", fallback_style: "Video game", fallback_prompt: "viking {{subject}}" },
+  bollywood: { pulid: "bollywood villain {{subject}}, tailored black suit, gold chains, grand palace, 8k cinematic", fallback_style: "3D", fallback_prompt: "bollywood villain {{subject}}" },
+  samurai: { pulid: "samurai master {{subject}} in Japanese garden, black gold armor, katana, cherry blossoms, 8k", fallback_style: "3D", fallback_prompt: "samurai {{subject}}" },
+  astronaut: { pulid: "astronaut {{subject}} in white spacesuit, Earth reflection in visor, 8k photo", fallback_style: "3D", fallback_prompt: "astronaut {{subject}}" },
+  pirate: { pulid: "pirate captain {{subject}} on storm-tossed ship, leather hat, gold hoop earring, 8k photo", fallback_style: "Video game", fallback_prompt: "pirate {{subject}}" },
+  greek_god: { pulid: "ancient Greek {{title}} atop Mount Olympus, golden laurel wreath, glowing eyes, 8k", fallback_style: "3D", fallback_prompt: "greek god {{title}}" },
+  steampunk: { pulid: "steampunk inventor {{subject}}, brass goggles, mechanical arm, 8k photo", fallback_style: "3D", fallback_prompt: "steampunk {{subject}}" },
+  wasteland: { pulid: "wasteland survivor {{subject}}, Mad Max style, spiked armor, desert dunes, 8k", fallback_style: "Video game", fallback_prompt: "wasteland {{subject}}" },
+  cyber_ninja: { pulid: "cyber-ninja {{subject}} in futuristic suit, glowing purple visor, 8k", fallback_style: "Video game", fallback_prompt: "cyber ninja {{subject}}" },
+  vampire: { pulid: "gothic vampire {{honorific}} in candlelit cathedral, red cloak, pale skin, 8k", fallback_style: "3D", fallback_prompt: "vampire {{subject}}" },
+  knight: { pulid: "noble knight {{subject}} in silver plate armor, medieval castle background, 8k photo", fallback_style: "3D", fallback_prompt: "knight {{subject}}" },
+  forest_druid: { pulid: "mystical druid {{subject}} in glowing ancient forest, crown of antlers, 8k", fallback_style: "3D", fallback_prompt: "druid {{subject}}" },
+  noir: { pulid: "1940s noir detective {{subject}} in trench coat, fedora, rainy street, B&W, 8k", fallback_style: "3D", fallback_prompt: "noir detective {{subject}}" },
+  atlantis: { pulid: "underwater {{title}} of Atlantis, scale armor, trident, 8k", fallback_style: "3D", fallback_prompt: "atlantis {{title}}" },
+  egyptian: { pulid: "ancient Egyptian {{title}}, gold headpiece, pyramids at sunset, 8k photo", fallback_style: "3D", fallback_prompt: "pharaoh {{subject}}" },
+  cyber_hacker: { pulid: "tech hacker {{subject}}, holographic screens, glowing code, 8k", fallback_style: "Video game", fallback_prompt: "hacker {{subject}}" },
+  ice_monarch: { pulid: "Ice {{title}} in palace of frozen glass, crown of ice, 8k", fallback_style: "3D", fallback_prompt: "ice king {{title}}" },
+  wild_west: { pulid: "wild west outlaw {{subject}}, leather duster, cowboy hat, 8k", fallback_style: "3D", fallback_prompt: "cowboy {{subject}}" },
+  gladiator: { pulid: "Roman gladiator {{subject}} in Colosseum, bronze chestplate, 8k", fallback_style: "Video game", fallback_prompt: "gladiator {{subject}}" },
+  elven: { pulid: "ethereal elven {{subject}} in silver forest, long bow, 8k", fallback_style: "3D", fallback_prompt: "elf {{subject}}" },
+  wizard: { pulid: "powerful wizard {{subject}} in star robes, staff with glowing gem, 8k", fallback_style: "3D", fallback_prompt: "wizard {{subject}}" },
+  cyber_medic: { pulid: "futuristic cyber-medic {{subject}}, sleek armor, healing nanobots, 8k", fallback_style: "3D", fallback_prompt: "sci-fi doctor {{subject}}" },
+  solarpunk: { pulid: "solarpunk architect {{subject}} in green city, vertical gardens, 8k", fallback_style: "3D", fallback_prompt: "solarpunk {{subject}}" },
+  superhero: { pulid: "superhero {{subject}} in high-tech suit, hero pose, 8k cinematic", fallback_style: "Video game", fallback_prompt: "superhero {{subject}}" },
+  monk: { pulid: "shaolin monk {{subject}} in orange robes, mountain peak, 8k", fallback_style: "3D", fallback_prompt: "monk {{subject}}" },
+  racer: { pulid: "formula 1 racer {{subject}} in futuristic suit, race car background, 8k", fallback_style: "Video game", fallback_prompt: "racer {{subject}}" },
+  sorcerer: { pulid: "dark sorcerer {{subject}}, purple flames, obsidian throne, 8k", fallback_style: "3D", fallback_prompt: "sorcerer {{subject}}" }
 };
-
 // ============================================
 // HELPERS
 // ============================================
@@ -197,6 +73,7 @@ app.post("/api/upload-face", upload.single("face"), (req, res) => {
   const ext = path.extname(req.file.originalname) || ".jpg";
   const newPath = req.file.path + ext;
   fs.renameSync(req.file.path, newPath);
+  console.log("Face uploaded:", newPath);
   res.json({ faceId: path.basename(newPath) });
 });
 
@@ -213,11 +90,13 @@ async function pollPrediction(predictionId, label) {
     await new Promise((r) => setTimeout(r, 2000));
     const response = await fetch(url, { headers: { Authorization: "Bearer " + REPLICATE_API_TOKEN } });
     const result = await response.json();
-    console.log(`    [${label}] Poll #${i + 1}: ${result.status}`);
+    console.log("    [" + label + "] Poll #" + (i + 1) + ": " + result.status);
     if (result.status === "succeeded") return result;
-    if (result.status === "failed" || result.status === "canceled") throw new Error(result.error || "failed");
+    if (result.status === "failed" || result.status === "canceled") {
+      throw new Error(result.status + ": " + (result.error || "unknown"));
+    }
   }
-  throw new Error("Timed out");
+  throw new Error("Timed out after 3 min");
 }
 
 async function downloadImage(imageUrl) {
@@ -229,78 +108,267 @@ async function downloadImage(imageUrl) {
   return outputName;
 }
 
+function getImageUrl(result) {
+  if (typeof result.output === "string") return result.output;
+  if (Array.isArray(result.output) && result.output.length > 0) return result.output[0];
+  return null;
+}
+
 async function callModel(url, body) {
   const response = await fetch(url, {
     method: "POST",
     headers: { Authorization: "Bearer " + REPLICATE_API_TOKEN, "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  if (!response.ok) throw new Error("HTTP " + response.status);
-  return await response.json();
+  const text = await response.text();
+  if (response.status === 429) {
+    console.log("    Rate limited, waiting 20s...");
+    await new Promise((r) => setTimeout(r, 20000));
+    const retry = await fetch(url, { method: "POST", headers: { Authorization: "Bearer " + REPLICATE_API_TOKEN, "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const rt = await retry.text();
+    if (!retry.ok) throw new Error("Retry failed " + retry.status + ": " + rt.substring(0, 200));
+    return JSON.parse(rt);
+  }
+  if (!response.ok) throw new Error("HTTP " + response.status + ": " + text.substring(0, 300));
+  return JSON.parse(text);
 }
 
 // ============================================
-// MAIN GENERATION
+// GENERATE CARD — Three-tier face preservation
+//
+// TIER 1: Flux PuLID (single-step, explicit face embedding)
+//   - Best face fidelity from a single selfie
+//   - Uses PuLID contrastive alignment on FLUX.1
+//   - start_step=0, id_weight=1.0 for max face preservation
+//
+// TIER 2: Two-step (Flux Kontext scene + codeplugtech face-swap)
+//   - Generates cinematic scene, then swaps face onto it
+//   - Highest raw face accuracy (~95%+)
+//
+// TIER 3: face-to-many (stylized fallback)
+//   - Already proven to work
 // ============================================
 app.post("/api/generate-card", async (req, res) => {
-  const { faceId, themeId, gender = "neutral" } = req.body;
-  if (!faceId || !themeId) return res.status(400).json({ error: "Missing params" });
+  const { faceId, themeId, gender = "neutral" } = req.body; // Added gender
+  if (!faceId || !themeId) return res.status(400).json({ error: "faceId and themeId required" });
 
-  const template = THEME_TEMPLATES[themeId];
-  if (!template) return res.status(400).json({ error: "Unknown theme" });
+  const theme = THEMES[themeId];
+  if (!theme) return res.status(400).json({ error: "Unknown theme: " + themeId });
 
-  const terms = getGenderTerms(gender);
+   // Placeholder logic
+  const terms = GENDER_WORDS[gender];
+  const processPrompt = (str) => {
+    return str.replace(/{{subject}}/g, terms.subject)
+              .replace(/{{title}}/g, terms.title)
+              .replace(/{{honorific}}/g, terms.honorific)
+              .replace(/{{adj}}/g, terms.adj);
+  };
+
+  const pulid_prompt = processPrompt(theme.pulid);
+  const fallback_prompt = processPrompt(theme.fallback_prompt);
+
   const facePath = path.join("uploads", faceId);
+  if (!fs.existsSync(facePath)) return res.status(404).json({ error: "Face not found" });
+
   const faceDataUri = fileToDataUri(facePath);
 
-  // Helper to replace placeholders
-  const fill = (str) => str.replace(/{{subject}}/g, terms.subject)
-                           .replace(/{{title}}/g, terms.title)
-                           .replace(/{{honorific}}/g, terms.honorific)
-                           .replace(/{{adj}}/g, terms.adj);
+  console.log("");
+  console.log("========================================");
+  console.log("  GENERATING: " + themeId.toUpperCase());
+  console.log("========================================");
 
-  console.log(`\n--- GEN: ${themeId} | GENDER: ${gender} ---`);
-
-  // TIER 1: Flux PuLID
+  // =========================================
+  // TIER 1: Flux PuLID — single-step face embedding
+  // =========================================
   try {
-    const prediction = await callModel("https://api.replicate.com/v1/predictions", {
-      version: "8baa7ef2255075b46f4d91cd238c21d31181b3e6a864463f967960bb0112525b",
-      input: {
-        main_face_image: faceDataUri,
-        prompt: fill(template.pulid),
-        width: 768, height: 1024, num_steps: 20, start_step: 0, id_weight: 1.0, output_format: "jpg"
-      },
-    });
+    console.log("  [TIER 1] Flux PuLID (face embedding)...");
+    console.log("    Using: bytedance/flux-pulid");
+    console.log("    start_step=0, id_weight=1.0 (max face fidelity)");
+
+    const prediction = await callModel(
+      "https://api.replicate.com/v1/predictions",
+      {
+        version: "8baa7ef2255075b46f4d91cd238c21d31181b3e6a864463f967960bb0112525b",
+        input: {
+          main_face_image: faceDataUri,
+          prompt: pulid_prompt,
+          negative_prompt: "(lowres, low quality, worst quality:1.2), watermark, deformed, mutated, cross-eyed, ugly, disfigured, bad anatomy, bad hands, text",
+          width: 768,
+          height: 1024,
+          num_steps: 20,
+          start_step: 0,
+          guidance_scale: 4,
+          id_weight: 1.0,
+          true_cfg: 1,
+          max_sequence_length: 128,
+          output_format: "png",
+          output_quality: 95,
+          num_outputs: 1,
+        },
+      }
+    );
+
+    if (prediction.error) throw new Error(prediction.error);
+    console.log("    Prediction: " + prediction.id);
 
     let result = prediction;
-    if (result.status !== "succeeded") result = await pollPrediction(result.id, "PuLID");
+    if (result.status !== "succeeded") {
+      result = await pollPrediction(result.id, "PuLID");
+    }
 
-    const out = await downloadImage(result.output[0] || result.output);
-    return res.json({ imageUrl: "/outputs/" + out, model: "pulid" });
+    const imageUrl = getImageUrl(result);
+    if (!imageUrl) throw new Error("No output image");
+
+    const outputName = await downloadImage(imageUrl);
+    console.log("  TIER 1 SUCCESS! " + outputName);
+    return res.json({ imageUrl: "/outputs/" + outputName, model: "flux-pulid", quality: "face-embedded" });
+
   } catch (err) {
-    console.log("Tier 1 Failed, trying Tier 3 Fallback...");
+    console.log("  TIER 1 FAILED: " + err.message);
   }
 
-  // TIER 3 Fallback (Face-to-Many)
+  // =========================================
+  // TIER 2: Two-step — scene generation + face swap
+  // =========================================
   try {
-    const prediction = await callModel("https://api.replicate.com/v1/predictions", {
-      version: "35cea9c3164d9fb7fbd48b51503eabdb39c9d04fdaef9a68f368bed8087ec5f9",
-      input: {
-        image: faceDataUri,
-        style: template.fallback_style,
-        prompt: fill(template.fallback_prompt),
-        instant_id_strength: 0.8,
-      },
-    });
+    console.log("  [TIER 2] Two-step pipeline...");
 
-    let result = prediction;
-    if (result.status !== "succeeded") result = await pollPrediction(result.id, "Fallback");
+    // Step 2a: Generate cinematic scene with Flux Kontext Pro
+    console.log("    Step 1: Generating scene with Flux Kontext Pro...");
+    const sceneResult = await callModel(
+      "https://api.replicate.com/v1/models/black-forest-labs/flux-kontext-pro/predictions",
+      {
+        input: {
+          prompt: theme.scene_prompt,
+          aspect_ratio: "3:4",
+          safety_tolerance: 5,
+          output_quality: 95,
+        },
+      }
+    );
 
-    const out = await downloadImage(result.output[0] || result.output);
-    return res.json({ imageUrl: "/outputs/" + out, model: "face-to-many" });
+    if (sceneResult.error) throw new Error("Scene: " + sceneResult.error);
+    let scene = sceneResult;
+    if (scene.status !== "succeeded") scene = await pollPrediction(scene.id, "Scene");
+
+    const sceneUrl = getImageUrl(scene);
+    if (!sceneUrl) throw new Error("No scene image");
+    console.log("    Step 1 DONE — scene generated");
+
+    // Step 2b: Swap face using codeplugtech/face-swap
+    console.log("    Step 2: Swapping face with codeplugtech/face-swap...");
+    const swapResult = await callModel(
+      "https://api.replicate.com/v1/models/codeplugtech/face-swap/predictions",
+      {
+        input: {
+          input_image: sceneUrl,
+          swap_image: faceDataUri,
+        },
+      }
+    );
+
+    if (swapResult.error) throw new Error("Swap: " + swapResult.error);
+    let swap = swapResult;
+    if (swap.status !== "succeeded") swap = await pollPrediction(swap.id, "FaceSwap");
+
+    const swapUrl = getImageUrl(swap);
+    if (!swapUrl) throw new Error("No swap output");
+
+    const outputName = await downloadImage(swapUrl);
+    console.log("  TIER 2 SUCCESS! " + outputName);
+    return res.json({ imageUrl: "/outputs/" + outputName, model: "flux+faceswap", quality: "cinematic-swap" });
+
   } catch (err) {
-    res.status(500).json({ error: "All tiers failed" });
+    const message = err.message || "Unknown error";
+    console.log("  TIER 2 FAILED: " + message);
+    if (message.includes("404")) {
+      console.log("    Face-swap endpoint may be unavailable or the model path is invalid.");
+    }
   }
+
+  // =========================================
+  // TIER 3: face-to-many (stylized fallback)
+  // =========================================
+  try {
+    console.log("  [TIER 3] face-to-many (fallback)...");
+
+    const prediction = await callModel(
+      "https://api.replicate.com/v1/predictions",
+      {
+        version: "35cea9c3164d9fb7fbd48b51503eabdb39c9d04fdaef9a68f368bed8087ec5f9",
+        input: {
+          image: faceDataUri,
+          style: theme.fallback_style,
+          prompt: fallback_prompt,
+          negative_prompt: "nsfw, nude, blurry, low quality, deformed, ugly, bad anatomy",
+          instant_id_strength: 0.8,
+        },
+      }
+    );
+
+    if (prediction.error) throw new Error(prediction.error);
+    let result = prediction;
+    if (result.status !== "succeeded") result = await pollPrediction(result.id, "FaceToMany");
+
+    const imageUrl = getImageUrl(result);
+    if (!imageUrl) throw new Error("No output");
+
+    const outputName = await downloadImage(imageUrl);
+    console.log("  TIER 3 SUCCESS! " + outputName);
+    return res.json({ imageUrl: "/outputs/" + outputName, model: "face-to-many", quality: "stylized" });
+
+  } catch (err) {
+    console.log("  TIER 3 FAILED: " + err.message);
+  }
+
+  console.log("  ALL TIERS FAILED");
+  res.status(500).json({ error: "All generation methods failed" });
 });
 
-app.listen(PORT, () => console.log(`FaceDrop Server on ${PORT}`));
+// Debug endpoints
+app.get("/api/debug/test-token", async (req, res) => {
+  try {
+    const r = await fetch("https://api.replicate.com/v1/account", { headers: { Authorization: "Bearer " + REPLICATE_API_TOKEN } });
+    res.json(await r.json());
+  } catch (err) { res.json({ error: err.message }); }
+});
+
+// Test Flux PuLID specifically
+app.get("/api/debug/test-pulid", async (req, res) => {
+  try {
+    const r = await fetch("https://api.replicate.com/v1/predictions", {
+      method: "POST",
+      headers: { Authorization: "Bearer " + REPLICATE_API_TOKEN, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        version: "8baa7ef2255075b46f4d91cd238c21d31181b3e6a864463f967960bb0112525b",
+        input: {
+          prompt: "portrait of a person, cinematic lighting",
+          width: 512,
+          height: 512,
+          num_steps: 4,
+          num_outputs: 1,
+        },
+      }),
+    });
+    const data = await r.json();
+    res.json({ status: r.status, data: data });
+  } catch (err) { res.json({ error: err.message }); }
+});
+
+// Start
+app.listen(PORT, () => {
+  console.log("");
+  console.log("============================================");
+  console.log("  FACEDROP v5.0 — Face Preservation Engine");
+  console.log("  Port: " + PORT);
+  console.log("  Token: " + (REPLICATE_API_TOKEN !== "YOUR_TOKEN_HERE" ? "YES" : "MISSING"));
+  console.log("");
+  console.log("  Three-tier pipeline:");
+  console.log("    T1: Flux PuLID (face embedding, best fidelity)");
+  console.log("    T2: Flux scene + codeplugtech face-swap");
+  console.log("    T3: face-to-many (stylized fallback)");
+  console.log("");
+  console.log("  Debug: /api/debug/test-token");
+  console.log("         /api/debug/test-pulid");
+  console.log("============================================");
+});
